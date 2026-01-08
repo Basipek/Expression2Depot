@@ -1,0 +1,69 @@
+@name ACF Turret E2 gift from Andy
+@inputs Active R V Shift [CamAng CalcPoint]:angle [Cam]:wirelink [Base]:entity 
+@outputs TurretActive Calc [Aimpoint]:angle
+@persist Cam Aimpoint [CamAng]:angle CalcPoint
+@trigger 
+@strict
+
+
+
+BaseOffset = vec(0,101,0)
+SniperOffset = vec(16,53,-60) 
+CamDistance = -6
+CamSniperDistance = 0
+
+if(first()|dupefinished())
+{
+    timer("delay",1000)
+    SniperView = 0
+    TurretActive = 0
+    CalcToggle = 0
+}
+
+if(clk("delay"))
+{
+    stoptimer("delay")
+     
+    Cam["Parent",entity]=Base
+}
+if(Active)
+{
+    if(R&~R)
+    {
+        TurretActive = !TurretActive
+    }
+    if(Shift&~Shift)
+    {
+        SniperView = !SniperView
+    }
+    if(SniperView)
+    {
+        Cam["Position",vector] = Base:toWorld(SniperOffset)    
+        Cam["Distance",number] = CamSniperDistance
+    }
+    else
+    {
+        Cam["Position",vector] = Base:toWorld(BaseOffset)
+        Cam["Distance",number] = CamDistance
+    }
+    
+    if(V&~V)
+    {
+        CalcToggle = !CalcToggle
+    }
+    if(CalcToggle)
+    {
+        Aimpoint = CalcPoint
+        Calc = 1
+    }
+    else
+    {
+        Aimpoint = CamAng
+        Calc = 0
+    }
+}
+else
+{
+    TurretActive = 0
+    SniperView = 0
+}

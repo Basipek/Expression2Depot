@@ -1,0 +1,7 @@
+@name nocliper
+@inputs 
+@outputs 
+@persist 
+@trigger 
+
+owner():plyNoclip(1)

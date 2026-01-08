@@ -1,0 +1,18 @@
+@name Bezier (Mine)
+@inputs 
+@outputs 
+@persist [Dot Dot1]:entity A B
+@trigger 
+if(first()){B=1
+    Dot=propSpawn("models/props_combine/breenglobe.mdl",entity():pos()+vec(300,0,0),1)
+    Dot1=propSpawn("models/props_combine/breenglobe.mdl",Dot:pos()+vec(-150,0,300),1)
+    holoCreate(1,bezier(entity():pos(),Dot1:pos(),Dot:pos(),A))
+holoCreate(2,bezier(entity():pos(),Dot1:pos(),Dot:pos(),0.5))
+}
+interval(50)
+A+=clamp(1*B-A,-0.01,0.01)
+if(B*1-A==0){B=0}
+if(A==0){B=1}
+holoPos(1,bezier(entity():pos(),Dot1:pos(),Dot:pos(),A))
+holoPos(2,bezier(entity():pos(),Dot1:pos(),Dot:pos(),0.5))
+

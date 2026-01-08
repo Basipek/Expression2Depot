@@ -1,0 +1,33 @@
+@name Setang steering gift of gabber866
+@inputs A D CHASSIS:entity
+@persist SLAVE:entity [TURN_RATE TURN_ANGLE TURN] Speed C
+@model models/hunter/plates/plate05x05.mdl
+if (dupefinished()) {reset()}
+
+B = round(toUnit("km/h",CHASSIS:vel():length()))
+
+
+if(Speed >= 30)  {
+    TURN_ANGLE = 22
+}
+else
+{
+    TURN_ANGLE = 42
+}
+
+if (first())    {
+    interval(20)
+    
+    TURN_RATE = 2.9
+
+    
+    SLAVE = entity()
+} elseif (clk())    {
+    interval(20)
+
+    if (!SLAVE:isPlayerHolding())    {
+        TURN += clamp((A-D)*TURN_ANGLE - TURN, -TURN_RATE, TURN_RATE)
+        SLAVE:setAng( CHASSIS:toWorld(ang(0, TURN, 0)) )
+        SLAVE:propFreeze(1)
+    }
+}

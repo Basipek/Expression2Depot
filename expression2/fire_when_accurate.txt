@@ -1,0 +1,34 @@
+@name Fire When Accurate
+@inputs TFinder:wirelink Barrel:entity
+@outputs Ent:entity Fire Active Deviation Short DistReal DistRanger
+@persist T:entity Ranger:ranger Short Deviation
+@trigger 
+@strict
+runOnTick(1)
+T=TFinder["1_Ent",entity]
+Array=Barrel:getConnectedEntities()
+Array:pushEntity(Barrel)
+rangerFilter(Array)
+Ranger=rangerOffset(Barrel:pos(),T:pos())
+
+
+
+DistRanger=Ranger:distance()
+DistReal=(T:pos():distance(Barrel:pos()))
+
+Short=((T:pos():distance(Barrel:pos()))-Ranger:distance()>500)
+Deviation=abs(Barrel:bearing(T:pos()))+abs(Barrel:elevation(T:pos()))
+
+if(clk("ChangeTarget")) {
+    if (!(T:pos():z()>(Barrel:pos():z()+250))|| !(Deviation<2) || Short) {
+        TFinder["1-NextTarget",number]=1
+        TFinder["1-NextTarget",number]=0
+    }
+}
+if (T:pos():z()>(Barrel:pos():z()+250)) {
+    Ent=T
+    Active=1
+    if ((Deviation<2)&!Short) {Fire=1} else {Fire=0}
+}else{timer("ChangeTarget",5000),Active=0,Fire=0}
+
+

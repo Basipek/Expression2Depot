@@ -1,0 +1,70 @@
+@name Mech Walk Big Mech Adapt
+@inputs Pod:wirelink [LFoot,RFoot,Hip]:entity
+@outputs [HipAngles,LFAngles,RFAngles]:angle [NOffset,FUOffset,FDOffset,ROffset,LOffset,RForce,LForce]:vector Stance
+@persist [HipAngles,LFAngles,RFAngles]:angle [NOffset,FUOffset,FDOffset,ROffset,LOffset,RForce,LForce,HForce]:vector Stance FootDist RN LN [Offsets,Offsets2]:array
+@trigger 
+
+runOnTick(1)
+if(dupefinished()){reset()}
+if(first()){
+    NOffset=vec(0,0,-250)
+    FUOffset=vec(0,140,-173)
+    FDOffset=vec(0,160,-270)
+    Offsets=array(NOffset,FUOffset,FDOffset)
+    Offsets2=array(FDOffset,NOffset,FUOffset)
+    FootDist=250
+    Stance=0
+}
+
+if(Pod["W",number]){
+    if(!Stance){Stance=1,timer("stance",500)}
+    Hip:applyForce((Hip:toWorld(vec(0,10,0))-Hip:pos())*Hip:mass())
+}
+elseif(Pod["S",number]){
+    Hip:applyForce((Hip:toWorld(vec(0,-10,0))-Hip:pos())*Hip:mass())
+    
+}else{
+    ROffset=Offsets[1,vector]
+    LOffset=Offsets[1,vector]
+    RN=1
+    LN=1
+}
+
+if(clk("stance")){
+    if(RN<=3){if(RN==3){RN=1}else{RN++}}
+    if(LN<=3){if(LN==3){LN=1}else{LN++}}
+    
+    ROffset=Offsets[RN,vector]
+    LOffset=Offsets2[LN,vector]
+    Stance=0
+}
+
+RFAngles=ang(vec(-RFoot:angles():pitch(),-Hip:toLocal(RFoot:angles()):yaw(),-RFoot:angles():roll()))
+LFAngles=ang(vec(-LFoot:angles():pitch(),-Hip:toLocal(LFoot:angles()):yaw(),-LFoot:angles():roll()))
+RFoot:applyAngForce((RFAngles+$RFAngles*5)*RFoot:mass()*100)
+LFoot:applyAngForce((LFAngles+$LFAngles*5)*LFoot:mass()*100)
+
+RForce=(vec(Hip:toWorld(ROffset+vec(FootDist,0,0)):x(),Hip:toWorld(ROffset+vec(FootDist,0,0)):y(),Hip:toWorld(ROffset+vec(FootDist,0,0)):z())-RFoot:pos())
+LForce=(vec(Hip:toWorld(LOffset+vec(-FootDist,0,0)):x(),Hip:toWorld(LOffset+vec(-FootDist,0,0)):y(),Hip:toWorld(LOffset+vec(-FootDist,0,0)):z())-LFoot:pos())
+
+RFoot:applyForce((RForce+$RForce*5)*RFoot:mass())
+LFoot:applyForce((LForce+$LForce*5)*LFoot:mass())
+
+HForce=(-RForce*(ROffset==NOffset|ROffset==FDOffset))+(-LForce*(LOffset==NOffset))
+
+Hip:applyForce((HForce+$HForce*5)*Hip:mass())
+
+if(Pod["A",number]){
+    HipAngles=ang(vec(-Hip:angles():pitch(),10,-Hip:angles():roll()))
+    Hip:applyAngForce((HipAngles+$HipAngles*5)*Hip:mass()*100)
+    
+}
+elseif(Pod["D",number]){
+    HipAngles=ang(vec(-Hip:angles():pitch(),-10,-Hip:angles():roll()))
+    Hip:applyAngForce((HipAngles+$HipAngles*5)*Hip:mass()*100)
+    
+}else{
+    HipAngles=ang(vec(-Hip:angles():pitch(),0,-Hip:angles():roll()))
+    Hip:applyAngForce((HipAngles+$HipAngles*5)*Hip:mass()*100)
+}
+

@@ -1,0 +1,337 @@
+@name Aiming Computer ApplyForce v2
+
+@inputs Active EGPActive AdjustForDist TargetAng:angle [TargetPos TarVel]:vector ParentObj:entity EGPW:wirelink Pod:wirelink 
+@inputs Zoom FLIR SwitchWeapon Fire Reload LaseRange
+
+@inputs [HB1 HB2 HB3 HB4]:entity
+@inputs [Gun1 Gun2 Gun3 Gun4]:wirelink
+@inputs [Muzvel1 Muzvel2 Muzvel3 Muzvel4]:number
+
+@inputs CustomVarUp CustomVarDown
+@inputs OverlayPos:vector
+
+@outputs Tar:angle CurWeapon CurGun:entity CurGunW:wirelink [FireOut ReloadOut]:array WepSwitch FLIR FOV MuzVel Range CustomVar
+@outputs ETA Reach
+
+@persist CurGunW:wirelink Tar:angle ScrSize:vector2 MuzVel
+@persist Reset CurWeapon
+@persist Angle DistR AngleMem:angle
+@persist [HORIZONTALF, GUNF]:angle Pr
+@persist FOV
+@persist [MaxLimits MinLimits RotSpeed]:angle 
+@persist Target:angle Parent:entity Driver:entity [Gs HBs Names MuzVels Ps]:array EGPColour:vector4 EGP:wirelink
+
+@trigger 
+
+#Instructions
+#[
+-Set-up Parameters and weapon quantity.
+-Active means passing the target input along. The gun *will* be rotated even when false.
+-EGPActive is for drawing the HUD
+-AdjustForDist makes gun pitch up to reach the distance when using TargetPos
+-TargetAng angle is angle the gun will aim for, uses TargetPos if TargetAng is nil. 
+  Uses driver angles if both nil: MAKE CAM CONTROLLER ROTATION-LOCKED TO GUN IF DRIVER, FOR WART HUNDER CAMERA
+-TarVel is target's velocity. If it exists, it'll try to lead the aim.
+-ParentObj is baseplate that the limits will be set around. Uses E2 if nil.
+-CurGun is the main weapon, chosen from gun wirelinks, moves pitch. #Mandatory!
+-EGPW is for HUD
+-Pod is for HUD
+-HorizontalBase is the base of the turret's horizontal movement,
+  chosen from HB1 through 3
+-Zoom and FLIR are cam controls
+-SwitchWeapon is for changing weapons, you can use alpha-number keys to switch to a specific one instead
+-FireOut is for telling you which weapon you're firing
+  similar with ReloadOut 
+-LaseRange is for lasing the current distance to see a aim height guidance bar for a short time
+-Muzvels are for muzzle velocity of weapons, for the rangetable in sight
+-CustomVar is a counter you can use
+-OverlayPos is a 3D world position you can use to have a blue square over your HUD
+-ETA and Reach are indirect fire ETA and reach respectively, in seconds and meters.
+
+-DistR is for the value to be calculated on the rangetable, you put distance in meters, it shows line to shoot at that meters
+-Range is aimpos distance for output
+
+Contact me at basipekgaming@gmail.com for support n what not
+]#
+
+    if (dupefinished()|duped()|~EGPW){reset()}
+    if (first()){WepSwitch=0,AngleMem=Target=ang(),CustomVar=0}
+    if(first()){
+        CurWeapon=1
+        
+        #Parameters
+        #Limits, thanks Burnto1122 !
+        local Elevation = 90
+        local Depression = 25
+        local Yaw = 360
+        RotSpeed = ang(15)
+        
+        MinLimits = -ang(Elevation, Yaw, 1)
+        MaxLimits = ang(Depression, Yaw, 1)
+        
+        Reset=0 #if gun'll reset back to zero pos when inactive
+        
+        #Weapon Quantity
+        Names=array("50mm APFSDS","50mm HEATFS","50mm HEFS","7.62mm AP Machinegun")
+        HBs=array(HB1,HB2,HB3,HB4)
+        Gs=array(Gun1,Gun2,Gun3,Gun4)
+        Ps=array(Gun1,Gun1,Gun1,Gun1)#Pitch Bases, this'll be which gun will be rotated to aim the selected gun.
+        MuzVels=array(Muzvel1,Muzvel2,Muzvel3,Muzvel4)
+        
+        #Defaults
+        FireOut=array(0,0,0)
+        ReloadOut=array(0,0,0)
+        
+        Driver=noentity()
+        
+        #Default Text Colour
+        EGPColour=vec4(255,0,0,255)
+    }
+    
+event tick() {
+    if (!ParentObj) {Parent=entity()}else{Parent=ParentObj}
+    
+    if(Pod["Driver",entity]!=Driver) {Driver=Pod["Driver",entity]}
+    
+    if (EGPActive) {EGP=EGPW}else{EGPW:egpClear(),EGP=wirelink()}
+    
+    ScrSize=egpScrSize(Driver)
+    
+    FOV=Zoom*-80+90
+    FLIR=FLIR
+    
+    #CustomVar up&down
+    CustomVar=CustomVar+CustomVarUp/10-CustomVarDown/10
+    
+    #Weapon Selection
+    if(!WepSwitch&SwitchWeapon){
+        CurWeapon=CurWeapon+SwitchWeapon
+        if(CurWeapon>3){CurWeapon=1},if(CurWeapon<1){CurWeapon=3},WepSwitch=1
+        FireOut=array(0,0,0)
+        ReloadOut=array(0,0,0)
+    }
+    WepSwitch=SwitchWeapon
+    
+    if (Driver:keyPressed("1")) {CurWeapon=1}
+    if (Driver:keyPressed("2")) {CurWeapon=2}
+    if (Driver:keyPressed("3")) {CurWeapon=3}
+    if (Driver:keyPressed("4")) {CurWeapon=4}
+    
+    CurGunW=Gs[CurWeapon,wirelink]
+    CurGun=CurGunW:entity()
+    
+    HorizontalBase=HBs[CurWeapon,entity]
+    
+    if(CurWeapon>0){
+        EGP:egpText(3,CurGunW["Shots Left",number]+"/"+CurGunW["AmmoCount",number],
+            ScrSize/2+vec2(50,0))#Ammo left in mag
+        EGP:egpColor(3,EGPColour)
+        EGP:egpText(4,CurWeapon+": "+Names[CurWeapon,string],ScrSize/2+vec2(50,-13))#CurWeapon
+        EGP:egpColor(4,EGPColour)
+        
+        CurGunW["Fire",number]=Fire
+        FireOut[CurWeapon,number]=Fire
+        
+        CurGunW["Reload",number]=Reload
+        ReloadOut[CurWeapon,number]=Reload
+        
+        MuzVel=MuzVels[CurWeapon,number]
+    }
+    
+    #[
+    Distance=(MuzVel*cos(Angle))*(MuzVel*sin(Angle)/toUnit("m",gravity()))
+    if(abs(DistR-Distance)>1){
+    if(Distance>DistR)
+    {
+        Delta=clamp((DistR-Distance)/100,-1,1)
+    }
+    else
+    {
+        Delta=clamp((Distance-DistR)/100,-1,1)
+    }
+    
+    if(0<=Angle&Angle<=45){
+        Angle=Angle-clamp(DistR-Distance,-Delta,Delta)
+        
+    }else{Angle=Angle+clamp(-Angle,-1,1)}
+    
+    }
+    ]#
+    
+    #This part is zeroing lines
+    DistR=150
+    #19.06.2023, works great
+    Angle = asin(fromUnit("m",DistR)*gravity()/(fromUnit("m/s",MuzVel)*fromUnit("m/s",MuzVel)))/2
+    
+    
+    EGP:egpBox(5,ScrSize/2+vec2(0,Angle*(ScrSize[1]/FOV)),vec2(150,2))
+    EGP:egpText(6,DistR+"",ScrSize/2+vec2(-75,Angle*(ScrSize[1]/FOV)))
+    EGP:egpColor(6,EGPColour)
+    EGP:egpColor(5,vec4(0,0,255,255))
+    
+    DistR=300
+    Angle = asin(fromUnit("m",DistR)*gravity()/(fromUnit("m/s",MuzVel)*fromUnit("m/s",MuzVel)))/2
+    
+    
+    EGP:egpBox(7,ScrSize/2+vec2(0,Angle*(ScrSize[1]/FOV)),vec2(150,2))
+    EGP:egpText(8,DistR+"",ScrSize/2+vec2(-75,Angle*(ScrSize[1]/FOV)))
+    EGP:egpColor(8,EGPColour)
+    EGP:egpColor(7,vec4(0,0,255,255))
+    
+    #UI text and numbers
+    if (TargetPos) {
+        Range=round(toUnit("m",TargetPos:distance(CurGun:pos())))
+    }else{
+        rangerFilter(CurGun:getConnectedEntities())
+        Range=round(toUnit("m",rangerOffset(1000000,CurGun:pos(),CurGun:forward()):distance()),1)
+    }
+    if(LaseRange)#for manually adjusting the zeroing bar
+    {
+        DistR=Range
+        Angle = asin(fromUnit("m",DistR)*gravity()/(fromUnit("m/s",MuzVel)*fromUnit("m/s",MuzVel)))/2
+        
+        EGP:egpBox(9,ScrSize/2+vec2(0,Angle*(ScrSize[1]/FOV)),vec2(150,2))
+    }else{
+        EGP:egpRemove(9)
+    }
+    
+    EGP:egpText(10,"Distance: "+Range,ScrSize/2+vec2(+40,+40))
+    EGP:egpColor(10,EGPColour)
+    EGP:egpText(11,"Elevation (Aim): "+round(-Target:pitch()),ScrSize/2+vec2(+40,+52))
+    EGP:egpColor(11,EGPColour)
+    EGP:egpText(12,"Bearing (Aim): "+round(-Target:yaw()),ScrSize/2+vec2(+40,+64))
+    EGP:egpColor(12,EGPColour)
+    
+    EGP:egpText(13,"CustomVar: "+CustomVar,ScrSize/2+vec2(+40,+76))
+    EGP:egpColor(13,EGPColour)
+    
+    #For Manual Arty shooting
+    Reach=round(-(MuzVel*cos(CurGun:angles():pitch()))*(MuzVel*sin(CurGun:angles():pitch())/toUnit("m",gravity())),1)
+    EGP:egpText(14,"Predicted Shot (Horizontal Reach): "+Reach+"m",
+        ScrSize/2+vec2(+40,+96))
+    EGP:egpColor(14,EGPColour)
+    
+    ETA=round(abs(MuzVel*sin(CurGun:angles():pitch())/toUnit("m",gravity())),1)
+    EGP:egpText(15,"ETA: "+ETA+" seconds",
+        ScrSize/2+vec2(+40,+108))
+    EGP:egpColor(15,EGPColour)
+    
+    EGP:egpText(16,"MuzVel: "+MuzVel+"m/s",
+        ScrSize/2+vec2(+40,+120))
+    EGP:egpColor(16,EGPColour)
+    
+    
+    if (CurGunW["OverHeat",number]) {
+        Overheat=" Oh No!"
+    }
+    EGP:egpText(17,"Gun Heat: "+ CurGunW["Heat",number] + Overheat,
+        ScrSize/2+vec2(+40,+145))
+    EGP:egpColor(17,EGPColour)
+    
+    if (CurGun) {
+        EGP:egpText(18,"Gun Health: "+ CurGun:acfPropHealth() + "/" + CurGun:acfPropHealthMax(),
+            ScrSize/2+vec2(+40,+157))
+        EGP:egpColor(18,EGPColour)
+    }
+    
+    #get and adjust target pos/angle
+    if (TargetAng) {Target=TargetAng}elseif(TargetPos){
+        if (TarVel&MuzVel) {
+            Target=((TargetPos+(TarVel*(TargetPos:distance(CurGun:pos())/fromUnit("m",MuzVel))))-CurGun:pos()):toAngle()
+        }else{
+            Target=(TargetPos-CurGun:pos()):toAngle()
+        }
+        if (AdjustForDist&MuzVel) {
+            #Pitch adjustment here #it is "good enough"
+            DistR=toUnit("m",TargetPos:distance(CurGun:pos()))
+            Angle=asin(fromUnit("m",DistR)*gravity()/(fromUnit("m/s",MuzVel)*fromUnit("m/s",MuzVel)))
+            Target=Target+ang(-Angle,0,0)
+        }
+    }elseif (Pod["Driver",entity]) {
+        Target=Pod["Driver",entity]:eyeAnglesVehicle()
+    }
+    #If no angle given, do reset behaviour
+    if(Reset){
+        if(!Target|!Active){Tar=Parent:angles()}else{Tar=Target}
+    }else{
+        if(!Target|!Active){
+            Tar=Parent:toWorld(AngleMem)
+        }else{
+            Tar=Target,AngleMem=Parent:toLocal(Target)
+        }
+    }
+    
+    
+    #Crosshairs
+    if (TargetAng) {
+        #Aiming white circle if the we're aiming for the center of screen.
+        EGP:egpCircleOutline(1,ScrSize/2,vec2(10))
+        EGP:egpColor(1,vec4(255,255,255,100))
+        
+        EGP:egpBox(2,vec2(egpScrW(Pod["Driver",entity])/FOV*CurGun:toLocal(Target):yaw(),
+            -egpScrW(Pod["Driver",entity])/FOV*CurGun:toLocal(Target):pitch())/2+(ScrSize/2),vec2(10))
+        EGP:egpColor(2,vec4(255*!CurGunW["Ready",number],255*CurGunW["Ready",number],0,100))
+    }elseif(TargetPos){
+        #Aiming white circle but at target pos if we have a target pos
+        EGP:egp3DTracker(19,TargetPos)#index is 19 because this entire section used to be up top at some point
+        EGP:egpCircleOutline(1,vec2(0),vec2(10))
+        EGP:egpColor(1,vec4(255,255,255,100))
+        EGP:egpParent(1,18)
+        
+        EGP:egpBox(2,vec2(egpScrW(Pod["Driver",entity])/FOV*CurGun:toLocal((TargetPos-CurGun:pos()):toAngle()):yaw(),
+            -egpScrW(Pod["Driver",entity])/FOV*CurGun:toLocal((TargetPos-CurGun:pos()):toAngle()):pitch())/2+(ScrSize/2),vec2(10))
+        EGP:egpColor(2,vec4(255*!CurGunW["Ready",number],255*CurGunW["Ready",number],0,100))
+    }else{
+        #Cute box if we're what the gun's facing.
+        EGP:egpBox(1,ScrSize/2,vec2(10))
+        EGP:egpColor(1,vec4(255*!CurGunW["Ready",number],255*CurGunW["Ready",number],0,100))
+        
+        EGP:egpCircleOutline(2,-vec2(egpScrW(Pod["Driver",entity])/FOV*CurGun:toLocal(Target):yaw(),
+            -egpScrW(Pod["Driver",entity])/FOV*CurGun:toLocal(Target):pitch())/2+(ScrSize/2),vec2(10))
+        EGP:egpColor(2,vec4(255,255,255,100))
+    }
+    
+    #Tells you what the aiming type is
+    TType=""
+    if (TargetPos) {
+        if (TarVel) {TType="Aim Pos + Vel"}else{
+            TType="Aim Position"
+        }
+    }elseif(TargetAng){
+        TType="Cam Angle"
+    }else{
+        TType="Driver EyeAng"
+    }
+    EGP:egpText(20,"Targeting Type: "+TType,
+        ScrSize/2+vec2(-230,-30))
+    EGP:egpColor(20,EGPColour)
+    
+    #Overlay pos
+    if (OverlayPos) {
+        EGP:egpBoxOutline(21,vec2(),vec2(50))
+        EGP:egpColor(21,vec4(0,100,150,255))
+        EGP:egp3DTracker(22,OverlayPos)
+        EGP:egpParent(21,22)
+    }
+    
+    PitchBase=Ps[CurWeapon,wirelink]["Entity",entity]
+    if (CurGun&PitchBase){
+        #Thank you Burnto1122!
+        Force = CurGun:toWorld(clamp(CurGun:toLocal(Tar), -RotSpeed, RotSpeed))
+        Clamped = clamp(Parent:toLocal(Force), MinLimits, MaxLimits)
+        Diff = CurGun:toLocal(Parent:toWorld(Clamped))
+        
+        Pr=25
+        #GAngs=CurGun:angles()
+        GUNF=Diff*(PitchBase:mass()+PitchBase:inertia():length())
+        PitchBase:applyAngForce(ang((GUNF+$GUNF*5-PitchBase:angVel()):pitch(),0,0)*Pr)
+    }
+    
+    if(HorizontalBase){
+        Pr=25
+        #HAngs=HorizontalBase:angles()
+        HORIZONTALF=Diff*(HorizontalBase:mass()+HorizontalBase:inertia():length()+PitchBase:inertia():length())
+        HorizontalBase:applyAngForce(ang(0,(HORIZONTALF+$HORIZONTALF*5-HorizontalBase:angVel()):yaw(),0)*Pr)
+    }
+}
+

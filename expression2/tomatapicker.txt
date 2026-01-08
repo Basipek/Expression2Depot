@@ -1,0 +1,41 @@
+@name TomataPicker
+@inputs Base:entity Ent:entity Tomatas:array
+@outputs Use TargetPos:vector
+@persist TargetPos:vector
+@trigger 
+@strict
+
+interval(50)
+
+if(first()) {
+    Smoothness = 0.1 # Adjust this value to control smoothness (lower is smoother)
+    TargetPos=Base:toLocal(Ent:pos())
+}
+if (!Base:isValid()) {
+    exit()
+}
+InRange=Base:pos():distance(Base:toWorld(TargetPos))<100
+
+if(Ent:isValid() & TargetPos & InRange) {
+    if(!Ent:isFrozen()){Ent:propFreeze(1)}
+    try {
+        Ent:setPos(Ent:pos() + (Base:toWorld(TargetPos) - Ent:pos()) * Smoothness)
+    } catch (_:string) {
+        reset()
+    }
+}
+
+foreach (_:number, V:entity = Tomatas) {
+    Ripe=V:getMaterial()=="phoenix_storms/wire/pcb_red"
+    Bad=V:getMaterial()=="phoenix_storms/wire/pcb_green"
+    if (V:model()=="models/props_junk/watermelon01.mdl" & (Ripe|Bad) & V:pos():distance(Base:pos())<100 & V:isWeldedTo():isValid()) {
+        TargetPos=Base:toLocal(V:pos()-(Ent:right()*30))
+        if (Base:toWorld(TargetPos):distance(Ent:pos())<5 ) {
+            if (Ripe) {V:constraintBreak()}
+            if (Bad) {V:propBreak()}
+        }
+        break
+    }
+    Use=0
+    TargetPos=vec(30,0,30)
+}

@@ -1,0 +1,85 @@
+@name Firing Range Timing
+@inputs Ents:array DoubleShotEnts:array NoShootEnts:array Start Reset Stop Time
+@outputs TimerOn TimerReset Buzzer TimeOut Penalty
+@persist ShotSoFar:array DoubleShots:array Timing Penalty
+@trigger 
+@strict
+
+if (first()) {
+    ShotSoFar=array()
+    DoubleShots=array()
+    Timing=0
+    Penalty=0
+}
+
+event entityDamage(Victim:entity, Damage:damage) {
+    if ((Ents:indexOf(Victim)>0 | DoubleShotEnts:indexOf(Victim)) & ShotSoFar:indexOf(Victim)==0 & Timing){
+        if (DoubleShotEnts:indexOf(Victim)==0) {
+            ShotSoFar:pushEntity(Victim)
+        }
+        if (DoubleShotEnts:indexOf(Victim)>0) {
+            if (DoubleShots:indexOf(Victim)==0) {
+                DoubleShots:pushEntity(Victim)
+            } else {
+                ShotSoFar:pushEntity(Victim) 
+            }
+        }
+        
+        if ((Ents:count()+DoubleShotEnts:count())==ShotSoFar:count()){
+            timer("end",0)
+        }
+    }elseif(NoShootEnts:indexOf(Victim)>0 & Timing){
+        Penalty=Penalty+1
+    }
+}
+
+if (Start) {
+    ShotSoFar=array()
+    DoubleShots=array()
+    Timing=0
+    TimerOn=0
+    Penalty=0
+    TimerReset=1
+    timer("start",3000)
+    Buzzer=1
+    timer("buzzoff",500)
+}
+
+if (clk("start")) {
+    Buzzer=1
+    timer("buzzoff",400)
+    timer("buzzcustom2",600)
+    timer("startfr",1000)
+}
+
+if (clk("startfr")) { #START WHEN BUZZ END
+    TimerReset=0
+    TimerOn=1
+    Timing=1
+}
+
+if (clk("buzzoff")) {Buzzer=0}
+
+if (Stop&Timing) {
+    timer("end",0)
+    Penalty=(Ents:count()+DoubleShotEnts:count()-ShotSoFar:count())*2
+}
+
+if (Reset) {
+    Timing=0
+    TimerOn=0
+    Penalty=0
+    TimerReset=1
+}
+
+if (clk("end")) {
+    timer("buzzoff",400)
+    Buzzer=1
+    timer("buzzcustom2",600)
+    TimerOn=0
+    Timing=0
+}
+
+if (clk("buzzcustom2")) {Buzzer=1,timer("buzzoff",400)}
+
+TimeOut=floor((Penalty+Time)*100)/100

@@ -1,0 +1,12 @@
+@name Saw thrower
+@inputs 
+@outputs 
+@persist A All:array
+@trigger 
+if(first()){print("N to throw saws and M to delete all B for auto")}
+runOnKeys(owner(),1)
+if(owner():keyPressed("N")){P=propSpawn("models/props_junk/sawblade001a.mdl",owner():shootPos()+vec(0,0,30),0),P:propFreeze(0),P:applyForce((owner():aimPos()-P:pos())*10000),All:pushEntity(P)}
+
+if(owner():keyPressed("M")){propDeleteAll(),foreach(K,V:entity=All){V:propDelete()},All:clear()}
+if(owner():keyPressed("B")){runOnTick(1),P=propSpawn("models/props_junk/sawblade001a.mdl",owner():shootPos()+vec(0,0,30),0),P:applyForce((owner():aimPos()-P:pos())*10000),All:pushEntity(P)}
+else{runOnTick(0)}

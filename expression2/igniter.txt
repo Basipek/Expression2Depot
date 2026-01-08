@@ -1,0 +1,9 @@
+@name igniter
+@inputs Explosive:entity 
+@outputs 
+@persist 
+@trigger 
+runOnTick(1)
+P=entity():isWeldedTo()
+if(owner():keyPressed("G")){
+    P:ignite(),Explosive:ignite()}

@@ -1,0 +1,234 @@
+@name Pound_v6 Gift of Bagel and JellyBeans
+#from pootland server
+@inputs W A S D Crouch Sprint [Vital]:array ADV:entity Seat:entity
+@outputs Obj:entity Hout
+#locals
+@persist [Hip]:entity
+@persist [HipLocal]:vector
+@persist [HipOffset]:vector
+#arrays
+@persist [Feet Locs Wors Offs Last Hp Rp]:array N Delta:vector
+#quarts
+@persist [HipHeld HipCur]:quaternion
+@persist Heading [For Up Rig]:vector
+@persist [WVec WVL WVR]:vector Time Flag Perc Status Trig CPerc CFlg
+@persist [VitalCopy]:array Tog SHT_1:string SHT_2:string SHT_3
+#Tweaks
+@persist FootMDL:string HipMDL:string KU TurnSpd ThrMax StepS LM UM TINC OFM FEETP FEETH HIPP CMUL CINC
+@trigger none
+
+#weak ku walker
+#v1 - creation
+#v2 - n-legged
+#v3 - dot products for rotationless f/r/u leg representation
+#v4 - arbitrary locking force during leg lower arc
+#v6 - required elements for "living", crouch toggle, "stomping" while turning without moving.
+
+interval(40)
+
+if(Sprint){
+ThrMax=18}else{ #max speed
+ThrMax=12}  #speed thing
+
+if(dupefinished())
+{
+    reset()
+}
+
+if(first())
+{    
+   #tweaks
+    KU = 40 #Hip Strenght
+    TurnSpd = 2 #turn speed
+    
+    StepS = 8  #Dont touch this
+    LM =  4  #step length
+    UM = 5 # step height
+    
+    SHT_1 = "j" #Key to press to make the stepheight higher
+    SHT_2 = "k" #Key to press to make the stepheight smaller
+    SHT_3 = 2   #Amount to increment the stepheight
+    
+    
+    FEETP = 2 #feet power
+    FEETH = 30 #Unknown
+    HIPP = 5 # Hip Hold Strength
+    
+    TINC = 0.08 #Initial speed increace
+    
+    CINC = 0.8 #Crouch power
+    CMUL = 0.01 #Crouch distance
+    
+    HipMDL = "models/sprops/cuboids/height24/size_1/cube_24x24x24.mdl"
+    FootMDL = "models/sprops/cuboids/height12/size_3/cube_36x30x12.mdl"
+    
+    #not tweaks
+    N = 1
+    Status = 0
+    Hip = noentity()
+    Feet = entity():getConstraints()
+    
+    For = vec(0, 1, 0)
+    Up = vec(0, 0, 1)
+    Rig = For:cross(Up)
+    
+    WVec = vec(0, 1, 0)
+    
+    VitalCopy = Vital:clone()
+
+    timer("chex", 10)
+}
+if(clk("chex"))
+{
+    while(perf() & (N <= Feet:count()))
+    {
+        if(Hip == noentity())
+        {
+            if(Feet[N, entity]:parent())
+            {
+                Feet:remove(N)
+            }
+            elseif(Feet[N, entity]:model():lower() == HipMDL:lower())
+            {
+                Hip = Feet[N, entity]
+                Obj = Hip
+                HipHeld = inv(quat(Hip))*quat(For, Up)
+                N = 1
+            }
+            else
+            {
+                N++
+            }
+        }
+        else
+        {
+            if(Feet[N, entity]:parent())
+            {
+                Feet:remove(N)   
+            }
+            elseif(Feet[N, entity]:model():lower() == FootMDL:lower())
+            {
+                TempV = Feet[N, entity]:massCenter() - Hip:massCenter()
+                Locs[N, vector] = vec(TempV:dot(For), TempV:dot(Rig), TempV:dot(Up))
+                HipLocal = (HipLocal * (N-1) + Locs[N, vector])/N
+                Hp[N*2 + 1, vector] = vec()
+                Hp[N*2, vector] = vec()
+                Rp[N, vector] = Feet[N, entity]:massCenter()
+                N++
+            }
+            else
+            {
+                Feet:remove(N)
+            }
+        }
+    }
+    if(N <= Feet:count())
+    {
+        timer("chex", 500)
+    }
+    else
+    {
+        Status = 1
+    }
+}
+
+if(clk() & (Status == 1))
+{
+    Flag = (abs(W - S) | abs(D - A)) * !CFlg
+    Perc = clamp(Perc + (Flag-!Flag) * TINC, 0, 1)
+    Time = (Time + Perc * ThrMax)
+    Heading = (Heading + (D - A) * TurnSpd * !CFlg)
+    For = vec(sin(Heading), cos(Heading), 0)
+    Up = vec(0, 0, 1)
+    Rig = For:cross(Up)
+    
+    if(Crouch & (!Tog))
+    {
+        CFlg = !CFlg
+        Tog = 1
+        if(CFlg)
+        {
+            ADV:hintDriver("Crouch: On", 3)
+        }
+        else
+        {
+            ADV:hintDriver("Crouch: Off", 3)
+        }
+    }
+    if(!Crouch & (Tog))
+    {
+        Tog = 0
+    }
+    
+    CPerc = clamp(CPerc + (!CFlg - CFlg) * CINC, CMUL, 1)
+    
+    if(Flag)
+    {
+        WVec = For * (W - S)
+        WVec = WVec:normalized()
+    }
+    
+    N = 1
+    Temp = vec()
+    while(N <= Feet:count())
+    {
+        TempV = Feet[N, entity]:massCenter() - Hip:massCenter()
+        Wors[N, vector] = vec(TempV:dot(For), TempV:dot(Rig), TempV:dot(Up))
+        WVL = Perc * StepS * (sin(Time + (N-1) * 360 / Feet:count()) * WVec * LM + cos(Time + (N-1) * 360 / Feet:count()) * Up * UM)
+        Last[N, vector] = Offs[N, vector]
+        
+        TempV = Wors[N, vector] - Locs[N, vector]
+        Offs[N, vector] = TempV:x() * For + TempV:y() * Rig + (TempV:z() * Up * CPerc) + WVL
+        
+        Delta = Offs[N, vector] - Last[N, vector]
+        
+        Trig = abs(((Time + ((N-1)*360)/Feet:count()) % 360)) < 180/(Feet:count())
+        
+        if(!Trig | (Perc < 1))
+        {
+            Rp[N, vector] = Feet[N, entity]:massCenter()
+        }
+        
+        Hp[N*2, vector] = Hp[N*2+1, vector]
+        Hp[N*2+1, vector] = Rp[N, vector] - Feet[N, entity]:massCenter()
+        
+        Hdel = Hp[N*2+1, vector] - Hp[N*2, vector]
+        
+        Feet[N, entity]:applyForce(((-(Offs[N, vector] + Delta * 1) * FEETP * !Trig) + (Trig * (Hp[N*2+1, vector] + Hdel * 1):setZ(0) * FEETH))*Feet[N, entity]:mass())
+        
+        Temp = (Temp * (N-1) + Offs[N, vector]) / N
+        N++
+    }
+    HipOffset = Temp 
+    Hip:applyForce((HipOffset + $HipOffset * 1) * HIPP * Hip:mass())
+    
+    HipCur = quat(Hip) * HipHeld
+    Hip:applyTorque(Hip:inertia() * KU * (Hip:toLocal(Hip:pos()+rotationVector(quat(For, Up)/HipCur))*25-Hip:angVelVector()))
+    
+    Hout = Heading
+    
+    if(VitalCopy:count() > 0)
+    {
+        N = 1
+        while(N <= VitalCopy:count())
+        {
+            if(Vital[N, entity] != VitalCopy[N, entity])
+            {
+                Status = 2
+            }
+            N = N + 1
+        }
+    }
+}
+TDriv=Seat:driver()
+UpS=TDriv:keyPressed(SHT_1)
+DnS=TDriv:keyPressed(SHT_2)
+
+if(changed(UpS)&UpS){
+UM+=SHT_3
+Seat:printDriver("Stepheight: "+UM+" (+"+SHT_3+"(")
+}
+if(changed(DnS)&DnS){
+UM-=SHT_3
+Seat:printDriver("Stepheight: "+UM+" (-"+SHT_3+"(")
+}

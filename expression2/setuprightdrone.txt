@@ -1,0 +1,54 @@
+@name SetUprightDrone
+@inputs Pod:wirelink Altitude Autopilot WPList:array GPS:vector Vel:vector
+@outputs FR FL BR BL C WPIndex VecOut:vector
+@persist HoldAlt OldAlt WPIndex MinDist X Y
+@trigger 
+@strict
+
+if(first()){OldAlt=HoldAlt=Altitude
+    WPIndex=1
+    MinDist=fromUnit("m",5)
+}
+event tick() {
+    if (!(Autopilot&WPIndex <= WPList:count())) {
+        W=Pod["W",number]
+        A=Pod["A",number]
+        S=Pod["S",number]
+        D=Pod["D",number]
+        Space=Pod["Space",number]
+        Alt=Pod["Alt",number]
+        
+        X=A-D
+        Y=W-S
+    }else{
+        # Calculate distance to the current waypoint
+        DistanceToWP = GPS:distance(WPList[WPIndex,vector])
+    
+        # Check if within threshold to consider reaching the waypoint
+        if (DistanceToWP <= MinDist) {
+            WPIndex = WPIndex + 1
+            if (WPIndex > WPList:count()) {
+                hint("WPLIST FINISHED",5)
+            }
+            break
+        }
+        
+        Diff=WPList[WPIndex,vector]-GPS
+        X=-Diff:normalized():x()
+        Y=-Diff:normalized():y()
+        
+        # Altitude-Hold controls
+        HoldAlt=WPList[WPIndex,vector]:z()+5
+    }
+    
+    HoldAlt=HoldAlt+Space*5-Alt*5
+    FR=(S-W+D-A)/4
+    FL=(S-W-D+A)/4
+    BR=(-S+W-D+A)/4
+    BL=(-S+W+D-A)/4
+    
+    C=(toUnit("m",HoldAlt)-toUnit("m",Altitude))/2-toUnit("m",Altitude-OldAlt)*5#I HATE THIS
+    
+    VecOut=vec(X,Y,-C)-Vel*0.1
+    OldAlt=Altitude
+}

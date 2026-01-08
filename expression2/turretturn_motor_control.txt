@@ -1,0 +1,16 @@
+@name TurretTurn Motor Control
+@inputs A D W S EGP:wirelink GUN:entity
+@outputs V H
+@persist V
+@trigger 
+
+V=(W-S)/4
+H=(D-A)/4
+runOnTick(1)
+
+EGP:egpBox(1,vec2(0),vec2(50))
+EGP:egpColor(1,vec4(0,255,0,100))
+rangerFilter(GUN)
+EGP:egp3DTracker(2,rangerOffset(10000,GUN:pos(),GUN:forward()):position())
+
+EGP:egpParent(1,2)

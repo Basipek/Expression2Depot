@@ -1,0 +1,13 @@
+@name spawnpoint
+@inputs 
+@outputs 
+@persist SP:vector Tar:entity Name:string
+@trigger 
+
+runOnSpawn(1)
+if(first()){Name="gabe"
+Tar=findPlayerByName(Name)
+}
+if(lastSpawnedPlayer():name()==Tar:name()){
+    Tar:plySetPos(entity():pos())
+}

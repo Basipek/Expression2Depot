@@ -1,0 +1,18 @@
+@name music player
+@inputs Play Next Prev 
+@outputs Music:string A B Name:string
+@persist K
+@trigger 
+if(first()){Music="music/hl1_song10.mp3"
+    }
+if(Play){A=1}else{A=0}
+if(Next==1){K++}
+if(Prev==1){K--}
+if(K==1){Music="erectriver.mp3",Name="erectiver",timer("A",202000)}
+if(K==2){Music="music/hl1_song25_remix3.mp3",Name="hl1_s25 remix",timer("B",28000)}
+if(K==3){Music="epic sax guy.mp3",Name="epic sax guy",timer("C",91000)}
+if(K==4){Music="music/hl1_song17.mp3",Name="hl1 song17",timer("D",56000)}
+if(K==5){Music="music/hl1_song10.mp3", Name="hl1 song10",timer("E",15000)}
+if(K==6){K=1}
+if(K==0){K=5}
+B=K

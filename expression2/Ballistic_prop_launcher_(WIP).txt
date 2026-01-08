@@ -1,0 +1,19 @@
+@name Ballistic prop launcher (WIP)
+@inputs A Tarpos:vector
+@outputs 
+@persist Dot:vector B
+@trigger 
+runOnTick(1)
+if(first()){
+    B=0
+    Dot=entity():isWeldedTo():pos()+vec(0,0,1500)
+}
+if(A==1){
+    if(entity():isWeldedTo():pos():distance(Dot)<100){
+    B=1}
+    if(B==1){entity():isWeldedTo():applyForce((Tarpos-entity():isWeldedTo():pos()-entity():isWeldedTo():vel())*entity():isWeldedTo():mass())}else{
+entity():isWeldedTo():applyForce((Dot-entity():isWeldedTo():pos()-entity():isWeldedTo():vel())*entity():isWeldedTo():mass())}
+    
+    
+    
+}

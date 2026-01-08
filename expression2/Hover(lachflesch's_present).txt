@@ -1,0 +1,68 @@
+@name Hover
+@inputs  [Pod]:wirelink
+@outputs Acc
+@persist TarPos:vector TarAng:angle 
+@persist W A S D R Shift Alt Space Active Mouse1 Mouse2 Direction
+@persist Speed L T N I Rotation
+@model models/hunter/blocks/cube1x2x025.mdl
+runOnTick(100)
+
+entity():setMass(1500)
+
+Plate=entity()
+
+# Pod Controller
+W           = Pod["W",      number]                                                                                                                                                                                         #Made by Lachflesch
+A           = Pod["A",      number]
+S           = Pod["S",      number]
+D           = Pod["D",      number]
+R           = Pod["R",      number]
+Shift       = Pod["Shift",  number]
+Alt         = Pod["Alt",    number]
+Space       = Pod["Space",  number]
+Active      = Pod["Active", number]
+Mouse1      = Pod["Mouse1", number]
+Mouse2      = Pod["Mouse2", number]
+if (W) {Direction = 1}
+if (S) {Direction = -1}
+
+# Ranger
+rangerFilter(Plate)
+rangerHitWater(1)
+RD = rangerOffset(Plate:pos(), Plate:pos():setZ(-7000000))
+
+
+# Turning
+if     (A | D)           {T += 1}
+else                     {T -= T/100}
+T = clamp(T, 0, 1)
+ 
+# Accelerating
+if     (W & !S)           {Acc += Shift ? 0.15 : 0.055}
+elseif (S & !W & Acc>0.7) {Acc -= Acc/1}
+elseif (S & !W)           {Acc -= 0.04}
+else                      {Acc -= Acc/25}
+if     (Alt  & Acc>0.8)   {Acc -= 0.1}
+elseif (!Shift & Acc>1.5) {Acc -= 0.1} 
+Acc = clamp(Acc, -1 , 10)
+
+ # Sound
+# Speed = Plate:vel():length() 
+# soundPitch(0, sqrt(Speed/3))
+# if ($Active)  {Plate:soundPlay(1,0,"")}
+
+# Position
+MultiplierP = 30*Acc
+if (RD:distance() < 50 & Space & !Plate:isUnderWater()) {
+    Plate:applyForce(Plate:up()*5000)
+}
+elseif (RD:distance() < 50 & !Plate:isUnderWater()) {
+    TarPos = Plate:pos():setZ(RD:position():z() + 40) + Plate:right()*MultiplierP
+    Plate:applyForce(((TarPos - Plate:pos()) * 9 - Plate:vel()) * Plate:mass())
+}
+
+# Angle
+MultiplierA = (3 + (Speed/4000))*(A-D)
+TarAng = ang(Acc>-0.1 ? L : -L, Plate:angles():yaw() + MultiplierA*T, 0)
+Plate:applyAngForce(((TarAng - Plate:angles()) * 40 - Plate:angVel()) * Plate:mass()*4)
+

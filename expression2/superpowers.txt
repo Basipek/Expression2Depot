@@ -1,0 +1,40 @@
+@name superpowers
+@inputs 
+@outputs 
+@persist Ply:entity ONFF HP 
+@trigger 
+if (first()|duped()){
+    HP=1000
+    Ply=owner()
+Ply:disableFallDamage()
+Ply:setHealth(HP)
+Ply:plySetRunSpeed(1000)
+}
+
+runOnTick(1)
+HP=500
+#superjump
+if (Ply:keyPressed("G")){
+    Ply:applyPlayerForce((Ply:aimPos()-Ply:pos())/5)   
+}
+#flying
+if (Ply:keyPressed("H")&ONFF==0) {
+    Ply:plySetGravity(1)
+    ONFF=1
+}
+if (Ply:keyPressed("J")&ONFF) {
+    Ply:plySetGravity(600)
+    ONFF=0
+}
+#health
+if(Ply:keyPressed("K")&Ply:health()<200){
+    Ply:setHealth(HP)
+}
+
+if(Ply:keyPressed("B")){hint("EXITING SUPERPOWERS",5)
+    entity():propDelete()
+    Ply:enableFallDamage()
+    Ply:plySetRunSpeed(500)
+    Ply:plySetGravity(600)
+    Ply:setHealth(100)}
+

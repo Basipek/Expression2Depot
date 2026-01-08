@@ -1,0 +1,23 @@
+@name Aiming Computer ApplyForce
+@inputs Gun:entity Fire Active EGP:wirelink Gunner:entity
+@outputs Fire El Re
+@persist El Be V H Re R Tar:angle
+@trigger 
+
+
+runOnTick(1)
+Tar=Gun:toLocal(Gunner:eyeAngles())
+
+El=Tar:pitch()
+Be=Tar:yaw()
+
+V=(El+$El*5)*Gun:mass()*10
+H=(Be+$Be*5)*Gun:mass()*10
+R=Gun:angles():roll()*Gun:mass()
+Re=-(R+$R*5)
+
+if(Active){Gun:applyAngForce(ang(vec(V,H,Re)))}
+
+Fire=Fire
+
+

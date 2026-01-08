@@ -1,0 +1,19 @@
+@name Aiming Computer V3 Ghetto Crowbar Turret Control
+@inputs Ents:array
+@outputs Fire Reload TarAng:angle HitPos:vector Active
+@persist Gunner:entity
+@trigger 
+@strict
+
+Gunner=Ents[1,entity]
+event tick() {
+    if (Gunner) {
+        if (Gunner:weapon():type()!="weapon_crowbar") {Active=0,exit()}
+        Active=Gunner:weapon():type()=="weapon_crowbar"
+        TarAng=Gunner:eyeAngles()
+        Fire=Gunner:keyAttack2()
+        Reload=Gunner:keyReload()
+        HitPos=Gunner:aimPos()
+    }else{Active=0}
+    
+}

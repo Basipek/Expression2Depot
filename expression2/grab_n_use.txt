@@ -1,0 +1,15 @@
+@name grab n use
+@inputs
+@outputs A
+@persist ENT:entity
+@trigger 
+if(first()){ENT=entity():isWeldedTo()}
+if(first()|clk("A")){timer("A",100)
+foreach(K,V:entity=players()){if(ENT:isPlayerHolding()&V:aimEntity()==ENT&V:keyPressed("B")){
+    A=1
+},runOnKeys(V,1)
+if(!ENT:isPlayerHolding()&V:aimEntity()!=ENT|V:keyPressed("N") ){
+    A=0
+}}
+}
+

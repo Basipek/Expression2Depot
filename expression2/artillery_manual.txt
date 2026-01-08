@@ -1,0 +1,24 @@
+@name Artillery Manual
+@inputs Muzvel  Gun:entity
+@outputs Fire Distgoing Topp:vector
+@persist Distpres Top:vector Down:vector Vy T2
+@trigger 
+
+runOnTick(1)
+
+
+Distgoing=Distpres
+
+
+Distpres=-(cos(Gun:angles():pitch())*Muzvel*(sin(Gun:angles():pitch())*Muzvel/6))
+
+T2=Vy/6/2
+Vy=sin(Gun:angles():pitch())*Muzvel
+Topp=Top=Gun:toWorld(vec( -(cos(Gun:angles():pitch())*Muzvel*(sin(Gun:angles():pitch())*Muzvel/6))/2,0, -(Vy*T2-6*(T2^2)/2)))
+Down=Gun:toWorld(vec( -(cos(Gun:angles():pitch())*Muzvel*(sin(Gun:angles():pitch())*Muzvel/6)),0, 0))
+
+holoCreate(0,Top,vec(10),ang(vec(0,0,0)),vec(255,0,0))
+holoCreate(1,Down,vec(10))
+
+
+Fire=owner():keyPressed("B")

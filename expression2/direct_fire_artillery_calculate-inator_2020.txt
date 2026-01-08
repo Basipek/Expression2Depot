@@ -1,0 +1,43 @@
+@name Direct Fire Artillery Calculate-inator 2020
+@inputs Fire [RotateYaw,RotatePitch]:entity Target MuzVel Vector:vector Active
+@outputs Fire Dist Ang RealDist
+@persist [Tar,Cur]:vector Angle Distance Delta
+@trigger 
+
+runOnTick(1)
+if(first()){Angle=0,Wirelink=RotatePitch:wirelink(),RotatePitch:deparent()}
+
+RotateYaw:propDrag(0)
+RotatePitch:propDrag(0)
+
+
+Wirelink["Fire",number]=Fire
+
+RealDist=Tar:distance(Cur)
+Dist=Distance
+Ang=Angle
+Cur=RotatePitch:pos()
+
+if(Target){Tar=Vector}
+
+
+
+Distance=(fromUnit("m/s",MuzVel))*cos(Angle)*((fromUnit("m/s",MuzVel))*sin(Angle)/gravity())
+#Vel*cos(Angle)*((Vel*sin(Angle))/(gravity()/350))*6
+#RotateYaw:setAng(ang(0,(Tar-Cur):toAngle():yaw(),0))
+
+if(Active){RotatePitch:setAng(ang((-Angle)+(Tar-Cur):toAngle():pitch(),(Tar-Cur):toAngle():yaw(),RotateYaw:angles():roll()))}
+
+if(Distance>Tar:distance(Cur))
+{
+    Delta=clamp((Distance-Tar:distance(Cur))/1000,0.00001,1)
+}
+else
+{
+    Delta=clamp((Tar:distance(Cur)-Distance)/1000,0.00001,1)
+}
+
+if(0<Angle<45){
+    Angle=Angle-clamp(Tar:distance(Cur)-Distance,-Delta,Delta)
+}else{Angle=clamp(45-Angle,-1,1)}
+

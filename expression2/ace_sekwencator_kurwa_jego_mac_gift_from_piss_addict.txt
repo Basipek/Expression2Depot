@@ -1,0 +1,62 @@
+@name ace Sekwencator kurwa jego mac gift from piss addict
+@inputs Fire
+@outputs [F1 F2 F3 F4]
+@persist [Mode Guns Delay] T:table
+
+
+if( dupefinished() ){ reset() }
+
+
+if( first() )
+{
+    # Delay is in milliseconds
+    Delay = 150
+    
+    # How many guns?
+    Guns = 4
+}
+
+
+if( ~Fire )
+{
+    if( Fire )
+    {
+        timer("fire",0)
+    }
+    else
+    {
+        stoptimer("fire")
+        for(I=1,Guns)
+        {
+            ioSetOutput("F"+I,0)
+        }
+        T:clear()
+    }
+    timer("remove",Delay)
+}
+
+
+if( clk("fire") )
+{
+    Mode = Mode % Guns + 1
+    
+    ioSetOutput( "F" + Mode, 1 )
+    
+    T:pushNumber( Mode )
+    
+    timer("fire",Delay)
+}
+
+
+if( clk("remove") & Fire )
+{
+    if( T[1,number] )
+    {
+        ioSetOutput( "F" + T[1,number], 0 )
+        
+        T:remove( 1 )
+    }
+    timer("remove",Delay)
+}
+
+

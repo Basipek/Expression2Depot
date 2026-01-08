@@ -1,0 +1,49 @@
+@name Fire When Accurate Alt and Targeter
+@inputs Tar:entity Gun:entity MuzVel
+@outputs Angle TarAng:angle Fire Clk DistDiff ChangeTar
+@persist DistR Clk Delay TarPos:vector
+@trigger 
+@strict
+
+Clk=0
+#Delay between shots
+Delay=100
+event tick() {
+    if (ChangeTar>1) {ChangeTar=-1}
+    if (Tar:isValid()&&Gun:isValid()) {
+        Clk++
+        
+        #Prediction
+        TarPos=Tar:pos()+Tar:vel()*(Tar:pos():distance(Gun:pos())/fromUnit("m/s",MuzVel))
+        
+        #GunAngs=Gun:angles()
+        DistR=TarPos:distance(Gun:pos())
+        #Asin of sine we'd have from solving x=sin*vel/grav*cos*vel*2
+        Angle = asin(2*DistR*gravity()/(fromUnit("m/s",MuzVel)*fromUnit("m/s",MuzVel)))
+        #Real facing towards target
+        AngR = (TarPos - Gun:pos()):toAngle()
+        #What we shall face
+        TarAng=ang(vec(AngR:pitch()-Angle,AngR:yaw(),AngR:roll()))
+        
+        
+        #Distance getter with ray so we know we don't have anything between us
+        T=Tar
+        Array=Gun:getConnectedEntities()
+        Array:pushEntity(Gun)
+        Array:pushEntity(Tar)
+        rangerFilter(Array)
+        Ranger=rangerOffset(Gun:pos(),T:pos())
+        
+        DistRanger=Ranger:distance()
+        DistReal=(T:pos():distance(Gun:pos()))
+        DistDiff=abs(DistReal-DistRanger)
+        
+        #Firing conditions
+        Fire=(Clk==round(Delay/10))&&(((TarAng:pitch()-360)%360-(Gun:angles():pitch()-360)%360)<1)&&
+        (((TarAng:yaw()-360)%360-(Gun:angles():yaw()-360)%360)<1)
+        &&(Tar:isAlive())
+        &&(DistDiff<100)
+        
+        if (Clk>Delay) {Clk=0,if(!(DistDiff<100)){ChangeTar+=0.5}}
+    }else{Fire=0}
+}

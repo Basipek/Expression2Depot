@@ -1,0 +1,21 @@
+@name bomb rain
+@inputs
+@outputs 
+@persist Ps:array
+@trigger 
+runOnChat(1)
+if(first()){timer("A",10)}
+function string ls(Index){
+    return owner():lastSaid():lower():explode(" ")[Index,string]
+}
+if(chatClk(owner())&ls(1)=="/bomb"&ls(2)){
+    hideChat(1)
+    for(K=1,10){
+        if(propCanSpawn()){Ps:pushEntity(propSpawn("models/props_phx/ww2bomb.mdl",findPlayerByName(ls(2)):pos()+vec(random(100),random(100),2000),0))}
+}
+}
+        if(clk("A")){
+foreach(K,V:entity=Ps){V:applyForce(((V:pos()-vec(0,0,1000))-V:pos())*50)}
+timer("A",10)
+}
+foreach(K,V:entity=Ps){if(V:pos():distance(findPlayerByName(ls(2)):pos())<=100){V:propBreak()}}

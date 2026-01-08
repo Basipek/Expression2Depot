@@ -1,0 +1,52 @@
+@name TomataGenerator
+@inputs Spawn
+@outputs ScoreOut Tomatas:array
+@persist Tomatas:array
+@trigger 
+@strict
+
+@model models/props_junk/watermelon01.mdl
+
+if (first()|duped()) {ScoreOut=0, Tomatas=array()}
+
+interval(100)
+
+foreach (K:number,Entity:entity = Tomatas) {
+    if (!Entity:isValid()){
+        Tomatas:removeEntity(K)
+        break
+    }
+    #define what the tomatas should look like
+    Ripe=Entity:getMaterial()=="phoenix_storms/wire/pcb_red"
+    Bad=Entity:getMaterial()=="phoenix_storms/wire/pcb_green"
+    
+    #Check if tomata at all
+    if (Entity:model()=="models/props_junk/watermelon01.mdl"&(Ripe|Bad)) {
+        if (Entity:isWeldedTo()!=entity()){
+            ScoreOut=ScoreOut+Ripe+Bad*(-1)
+            Tomatas:removeEntity(K)
+        }
+    }
+}
+
+
+#spawn random tomata at random pos nearby
+if (~Spawn & Spawn) {
+    if (propCanCreate()) {
+        RandomX=random(entity():pos():x()-50,entity():pos():x()+50)
+        RandomY=random(entity():pos():y()-50,entity():pos():y()+50)
+        RandomZ=random(entity():pos():z(),entity():pos():z()+50)
+        P=propSpawn("models/props_junk/watermelon01.mdl",vec(RandomX,RandomY,RandomZ),0)
+        P:weld(entity(),0,1)
+        
+        #give random texture
+        RandomT=random(1,100)
+        if(RandomT>=70){
+            P:setMaterial("phoenix_storms/wire/pcb_green")
+        }else{
+            P:setMaterial("phoenix_storms/wire/pcb_red")
+        }
+        
+        Tomatas:pushEntity(P)
+    }
+}

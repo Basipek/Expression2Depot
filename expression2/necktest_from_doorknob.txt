@@ -1,0 +1,92 @@
+@name necktest from doorknob
+#doorknob from Pootland
+@inputs  Seat:entity
+@outputs CamPos:vector CamDist
+@persist Base:entity EyeAng:angle
+
+if(first()){
+    
+runOnTick(1)
+propSpawnUndo(0)
+
+
+Base = propSpawn("models/Combine_Helicopter/helicopter_bomb01.mdl",entity():pos() + vec(0,0,40), ang(),1)
+Base:setMass(1000)
+Base:setAlpha(50)
+
+holoCreate(1)
+holoPos(1,Base:pos()+vec(10,0,0))
+holoParent(1,Base)
+
+holoCreate(2)
+holoPos(2,holoEntity(1):pos()+vec(10,0,0))
+holoParent(2,holoEntity(1))
+
+holoCreate(3)
+holoPos(3,holoEntity(2):pos()+vec(10,0,0))
+holoParent(3,holoEntity(2))
+
+holoCreate(4)
+holoPos(4,holoEntity(3):pos()+vec(10,0,0))
+holoParent(4,holoEntity(3))
+
+holoCreate(5)
+holoPos(5,holoEntity(4):pos()+vec(10,0,0))
+holoParent(5,holoEntity(4))
+
+holoCreate(6)
+holoPos(6,holoEntity(5):pos()+vec(10,0,0))
+holoParent(6,holoEntity(5))
+
+holoCreate(7)
+holoPos(7,holoEntity(6):pos()+vec(10,0,0))
+holoParent(7,holoEntity(6))
+
+holoCreate(8)
+holoPos(8,holoEntity(7):pos()+vec(10,0,0))
+holoParent(8,holoEntity(7))
+
+}
+
+EyeAng=Base:toLocal(owner():eyeAngles())
+
+if (owner():keyAttack2()) {
+    
+CamPos=holoEntity(8):toWorld(vec(0,0,15))
+CamDist=15
+
+}
+
+else {
+    
+CamPos=holoEntity(8):toWorld(vec(0,0,40))
+CamDist=175
+    
+}
+
+if(owner():keyPressed("r")){
+
+Base:setAng(EyeAng)
+holoAng(1,holoEntity(1):angles())
+holoAng(2,holoEntity(2):angles())
+holoAng(3,holoEntity(3):angles())
+holoAng(4,holoEntity(4):angles())
+holoAng(5,holoEntity(5):angles())
+holoAng(6,holoEntity(6):angles())
+holoAng(7,holoEntity(7):angles())
+holoAng(8,holoEntity(8):angles())
+
+}
+
+else{
+
+holoAng(1,-Base:toLocal(-EyeAng/4))
+holoAng(2,-Base:toLocal(-EyeAng/2.75))
+holoAng(3,-Base:toLocal(-EyeAng/2.5))
+holoAng(4,-Base:toLocal(-EyeAng/2.25))
+holoAng(5,-Base:toLocal(-EyeAng/2))
+holoAng(6,-Base:toLocal(-EyeAng/1.75))
+holoAng(7,-Base:toLocal(-EyeAng/1.5))
+holoAng(8,-Base:toLocal(-EyeAng/1.25))
+
+}

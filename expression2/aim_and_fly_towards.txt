@@ -1,0 +1,32 @@
+@name Aim and Fly towards
+@inputs 
+@outputs 
+@persist [E,A]:entity
+@trigger 
+
+runOnTick(1)
+interval(1000)
+if(first()){
+    
+    findInSphere(entity():pos(),10000)
+    #findByModel("vulture")
+    foreach(K, E:entity = findToArray()){
+        if(E:model():lower():find("vulture") ){A=E,break}
+    }
+}
+E=entity():isWeldedTo()
+if(A:pos()!= vec(0,0,0) & A:isValid()){
+    
+    #entity():isWeldedTo():applyForce(((A:pos()-entity():isWeldedTo():pos())*entity():isWeldedTo():mass()))
+    #Linear Stuff
+    
+    E:applyAngForce( (E:toLocal( (A:pos() -E:pos()  ):toAngle() ) * 150 - E:angVel() * 8) * shiftL( ang( E:inertia() ) ) )
+    #Angular Stuff (the explanation or context should be at wiremod's discord server #help, check messages by me)
+    
+}else{
+    #findInSphere(entity():pos(),10000)
+    findByModel("vulture")
+    foreach(K, E:entity = findToArray()){
+        if(E:model():lower():find("vulture") ){A=E,break}
+    }
+}

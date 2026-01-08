@@ -1,0 +1,8 @@
+@name Shipment checker
+@inputs Ent:entity
+@outputs String:string
+@persist 
+@trigger 
+
+runOnTick(1)
+if(Ent:isShipment()){String=Ent:shipmentName()+"\n in stock: "+Ent:shipmentAmount()}else{String="Empty"}

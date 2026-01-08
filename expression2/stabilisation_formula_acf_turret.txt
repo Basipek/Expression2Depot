@@ -1,0 +1,57 @@
+@name Stabilisation Formula ACF turret
+@inputs YAW:entity PITCH:entity BRAKES:entity Fire Aim:vector Active Reload Angle:angle AngleMode UP DOWN LEFT RIGHT EGP:wirelink
+@outputs Fire Reload
+@persist [ANGPITCH,ANGYAW]:angle [POS,SETPOS]:vector PVAL YVAL
+@trigger 
+
+runOnTick(1)
+
+if(first()){EGP:egpBox(1,vec2(0,0),vec2(10,10)),SETPOS=YAW:toLocal(PITCH:pos())}
+
+Fire=Fire
+Reload=Reload
+AIM=Aim
+
+
+
+if(Active){
+    
+    
+    if(AngleMode)
+    {
+        ANGPITCH=(ang(-Angle:pitch()+PITCH:angles():pitch(),0,0))*PITCH:mass()*10
+        ANGYAW=(ang(0,-Angle:yaw()+YAW:angles():yaw(),0))*YAW:mass()*10
+        YAW:applyAngForce(ANGYAW+$ANGYAW*5)
+        PITCH:applyAngForce(ANGPITCH+$ANGPITCH*5)
+    }elseif(UP|DOWN|RIGHT|LEFT)
+    {
+        PVAL=UP-DOWN
+        YVAL=RIGHT-LEFT
+        if(DOWN|UP){PITCH:setPos(YAW:toWorld(SETPOS)),PITCH:constraintBreak("weld",YAW)}else{weld(PITCH,YAW)}
+        
+        if(LEFT|RIGHT){YAW:constraintBreak("weld",BRAKES)}else{weld(YAW,BRAKES)}
+        
+        ANGPITCH=(ang(PVAL,0,0))*PITCH:mass()*10-PITCH:angVel()
+        ANGYAW=(ang(0,YVAL,0))*YAW:mass()*100
+        YAW:applyAngForce(ANGYAW+$ANGYAW*5)
+        PITCH:applyAngForce(ANGPITCH+$ANGPITCH*5)
+        
+    }elseif(AIM!=vec(0,0,0)){
+        ANGPITCH=(ang(-PITCH:elevation(AIM),0,0))*PITCH:mass()*10
+        ANGYAW=(ang(0,-YAW:bearing(AIM),0))*YAW:mass()*10
+        YAW:applyAngForce(ANGYAW+$ANGYAW*5)
+        PITCH:applyAngForce(ANGPITCH+$ANGPITCH*5)
+    }else{
+        weld(PITCH,YAW)
+        weld(YAW,BRAKES)
+        ANGYAW=(ang(0,-YAW:angVel():yaw(),0))*YAW:mass()
+        YAW:applyAngForce(ANGYAW+$ANGYAW*5)
+    }
+}
+    
+EGP:egpColor(1,vec4(0,255,0,100))
+rangerFilter(PITCH)
+
+EGP:egp3DTracker(2,rangerOffset(100000,PITCH:pos(),PITCH:forward()):position())
+EGP:egpParent(1,2)
+

@@ -1,0 +1,11 @@
+@name Flying propvehicle
+@inputs Prop:entity
+@outputs 
+@persist Ent:entity O:entity
+@trigger 
+runOnTick(1)
+if(->Prop){Ent=Prop}else{Ent=entity():isWeldedTo()}
+O=owner()
+if(O:vehicle():isValid()){if(O:keyPressed("W")){Ent:applyForce(((O:aimPos()-Ent:pos()))*Ent:mass()-Ent:vel())}
+}
+

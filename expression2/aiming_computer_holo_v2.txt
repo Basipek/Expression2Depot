@@ -1,0 +1,270 @@
+@name Aiming Computer Holo v2
+
+@inputs Target:angle Parent:entity Gun:entity EGP:wirelink Pod:wirelink HorizontalBase:entity Zoom FLIR SwitchWeapon Fire LaseRange
+@inputs Ammo1 Ammocap1 Ammo2 Ammocap2 Ammo3 Ammocap3 Muzvel1 Muzvel2 Muzvel3 CustomVarUp CustomVarDown
+
+@outputs Holo:entity Ang:angle El Be Fire1 Fire2 Fire3 Sel1 Sel2 Sel3 WepSwitch FLIR FOV MuzVel Range CustomVar Angle AngleRaw
+
+@persist El Be A GunW:wirelink Ang:angle Speed PitchL YawL ScrSize:vector2 MuzVel Tar:angle
+@persist Holo:entity Offset:vector HorHolo:entity Reset CurWeapon [Name1,Name2,Name3]:string
+@persist Angle AngleRaw DistR AngleMem:angle #Delta Distance
+
+@trigger 
+
+#Instructions
+#[
+-Set-up Parameters
+-Tar angle is angle the gun will aim for
+-Parent is baseplate #Mandatory!
+-Gun is the main weapon, parent the parts that will move with the gun to this
+-EGP is for HUD
+-Pod is for HUD
+-HorizontalBase is the base of the turret's horizontal movement, parent the other plates of the turret that move only horizontally to this
+-Zoom and FLIR are cam controls
+-SwitchWeapon is for changing weapons
+-Fire is for firing selected weapon
+-LaseRange is for lasing the current distance to see a aim height guidance bar for a short time
+-Ammo and ammocaps are ammo and ammobox ammo for the 3 selectable weapons
+-Muzvels are for muzzle velocity of weapons, for the rangetable in sight
+-CustomVar is a counter you can use
+
+-DistR is for the value to be calculated on the rangetable, you put distance in meters, it shows line to shoot at that meters
+-Range is aimpos distance for output
+
+Contact me at basipekgaming@gmail.com for support n what not
+]#
+
+    if (dupefinished() ){reset() }
+    if (first()){WepSwitch=0,AngleMem=Target,CustomVar=0}
+    if(holoCanCreate()&first()){
+        A=0
+        CurWeapon=1
+        
+        #Parameters
+        Speed=1 #Aim Speed 
+        Offset=vec(0,0,50) #Holo Offset from Parent
+        #Limits, set to over 360 for no limits
+        PitchL=361 #Pitch limit both ways
+        YawL=361 #Yaw limit both ways
+        Reset=0 #if gun'll reset back to zero pos when inactive
+        
+        #Weapon Names
+        Name1="Gun1"
+        Name2=""
+        Name3=""
+        
+        if(first()){#deparent gun and all and freeze so we can move and parent again
+            Gun:deparent()
+            HorizontalBase:deparent()
+            HorizontalBase:propFreeze(1)
+            Gun:propFreeze(1)
+        }
+        GunW=Gun:wirelink() #Gun wirelink for data
+        
+        #Create all axis Holo
+        holoCreate(1,Parent:toWorld(Offset),vec(0.5,0.5,1))
+        Holo=holoEntity(1)
+        holoAlpha(1,100)
+        holoAng(1,ang(vec(0)))
+        holoParent(1,Parent)
+        
+        #Create horizontal Holo
+        holoCreate(2,Parent:toWorld(Offset),vec(0.5,1,0.5))
+        holoAlpha(2,100)
+        holoAng(2,ang(vec(0)))
+        holoParent(2,Parent)
+        HorHolo=holoEntity(2)
+        
+        #Set angles to zero difference for when parenting
+        HorizontalBase:setPos(HorHolo:pos())
+        HorizontalBase:setAng(HorHolo:angles())
+        Gun:setPos(Holo:pos())
+        Gun:setAng(Holo:angles())
+        
+        #timer for sure stuff I guess
+        timer("A",1000)
+        
+    }
+    
+    if(clk("A")&!A){
+        
+        #parent em lads so they move without ops
+        HorizontalBase:parentTo(HorHolo)
+        Gun:parentTo(Holo)
+        A=1
+        
+    }
+    
+    event tick() {
+    if(A){ A=1
+    ScrSize=egpScrSize(Pod["Driver",entity])
+    
+    if(Reset){
+        if(!Target){Tar=Parent:angles()}else{Tar=Target}
+        El=Holo:toLocal(Tar):pitch()
+        Be=Holo:toLocal(Tar):yaw()
+    }else{
+        if(!Target){
+            Tar=AngleMem
+            El=Holo:toLocal(Parent:toWorld(Tar)):pitch()
+            Be=Holo:toLocal(Parent:toWorld(Tar)):yaw()
+        }else{
+            Tar=Target,AngleMem=Parent:toLocal(Target)
+            El=Holo:toLocal(Tar):pitch()
+            Be=Holo:toLocal(Tar):yaw()
+        }
+    }
+    
+    
+    #Where you are aiming
+    EGP:egpBox(1,ScrSize/2,vec2(10))
+    EGP:egpColor(1,vec4(255*!GunW["Ready",number],255*GunW["Ready",number],0,100))
+    #Where the gun is aiming
+    EGP:egpBox(2,vec2(egpScrW(Pod["Driver",entity])/2*Holo:toLocal(Tar):yaw()/90,-egpScrH(Pod["Driver",entity])/2*Holo:toLocal(Tar):pitch()/90)+(ScrSize/2),vec2(10,20))
+    EGP:egpColor(2,vec4(255*!GunW["Ready",number],255*GunW["Ready",number],0,100))
+    
+    #Is target angle inside limits?
+    CanFire=(( -PitchL < Ang:pitch() + clamp(El,-Speed,Speed) & Ang:pitch() + clamp(El,-Speed,Speed) < PitchL )&(-YawL < Ang:yaw()+clamp(Be,-Speed,Speed) & Ang:yaw()+clamp(Be,-Speed,Speed)<YawL))
+    
+    #CustomVar up&down
+    CustomVar=CustomVar+CustomVarUp-CustomVarDown
+    
+    #Weapon Selection
+    if(!WepSwitch&SwitchWeapon){CurWeapon=CurWeapon+SwitchWeapon,Angle=45,if(CurWeapon>3){CurWeapon=1},if(CurWeapon<1){CurWeapon=3},WepSwitch=1}
+    WepSwitch=SwitchWeapon
+    #Weapon Selection
+    if(CurWeapon==1){
+        EGP:egpText(3,Ammo1+"/"+(Ammocap1-Ammo1),ScrSize/2+vec2(50,0))#Ammo left in mag
+            EGP:egpText(4,Name1,ScrSize/2+vec2(50,-13))#CurWeapon
+            Fire1=Fire&CanFire
+            Fire2=0
+            Fire3=0      
+              
+            Sel1=1
+            Sel2=0
+            Sel3=0
+            
+            MuzVel=Muzvel1
+        
+    }elseif(CurWeapon==2){
+        
+            EGP:egpText(3,Ammo2+"/"+(Ammocap2-Ammo2),ScrSize/2+vec2(50,0))#Ammo left in mag
+            EGP:egpText(4,Name2,ScrSize/2+vec2(50,-13))#CurWeapon
+            Fire1=0
+            Fire2=Fire&CanFire
+            
+            Fire3=0
+            Sel1=0
+            Sel2=1
+            Sel3=0
+            
+            MuzVel=Muzvel2
+        
+    }elseif(CurWeapon==3){
+        
+            EGP:egpText(3,Ammo3+"/"+(Ammocap3-Ammo3),ScrSize/2+vec2(50,0))#Ammo left in mag
+            EGP:egpText(4,Name3,ScrSize/2+vec2(50,-13))#CurWeapon
+            Fire1=0
+            Fire2=0
+            Fire3=Fire&CanFire
+            
+            Sel1=0
+            Sel2=0
+            Sel3=1
+            
+            MuzVel=Muzvel3
+        
+    }else{
+        Fire1=0
+        Fire2=0
+        Fire3=0
+    }
+    
+    FOV=Zoom*-80+90
+    FLIR=FLIR
+    #[
+    Distance=(MuzVel*cos(Angle))*(MuzVel*sin(Angle)/toUnit("m",gravity()))
+    if(abs(DistR-Distance)>1){
+    if(Distance>DistR)
+    {
+        Delta=clamp((DistR-Distance)/100,-1,1)
+    }
+    else
+    {
+        Delta=clamp((Distance-DistR)/100,-1,1)
+    }
+    
+    if(0<=Angle&Angle<=45){
+        Angle=Angle-clamp(DistR-Distance,-Delta,Delta)
+        
+    }else{Angle=Angle+clamp(-Angle,-1,1)}
+    
+    }
+    ]#
+    
+    DistR=150
+    #19.06.2023, works great
+    AngleRaw = asin(2*fromUnit("m",DistR)*gravity()/(fromUnit("m/s",MuzVel)*fromUnit("m/s",MuzVel)))
+    
+    Angle=AngleRaw
+    
+    EGP:egpBox(5,ScrSize/2+vec2(0,Angle*(ScrSize[2]/FOV)),vec2(150,2))
+    EGP:egpText(6,DistR+"",ScrSize/2+vec2(-75,Angle*(ScrSize[2]/FOV)))
+    EGP:egpColor(5,vec4(0,0,255,255))
+    
+    DistR=300
+    AngleRaw = asin(2*fromUnit("m",DistR)*gravity()/(fromUnit("m/s",MuzVel)*fromUnit("m/s",MuzVel)))
+    
+    Angle=AngleRaw
+    
+    EGP:egpBox(7,ScrSize/2+vec2(0,Angle*(ScrSize[2]/FOV)),vec2(150,2))
+    EGP:egpText(8,DistR+"",ScrSize/2+vec2(-75,Angle*(ScrSize[2]/FOV)))
+    EGP:egpColor(7,vec4(0,0,255,255))
+    
+    #UI text and numbers
+    rangerFilter(Gun)
+    Range=round(toUnit("m",Gun:pos():distance(rangerOffset(1000000,Gun:pos(),Gun:forward()):position())),1)
+    if(LaseRange)#for manually adjusting the zeroing bar
+    {
+        DistR=Range
+        AngleRaw = asin(2*fromUnit("m",DistR)*gravity()/(fromUnit("m/s",MuzVel)*fromUnit("m/s",MuzVel)))
+        
+        Angle=AngleRaw
+        
+        EGP:egpBox(9,ScrSize/2+vec2(0,Angle*(ScrSize[2]/FOV)),vec2(150,2))
+    }else{
+        EGP:egpRemove(9)
+    }
+    
+    EGP:egpText(10,"Distance: "+Range,ScrSize/2+vec2(+40,+40))
+    EGP:egpText(11,"Elevation (Cam): "+round(-Target:pitch()),ScrSize/2+vec2(+40,+52))
+    EGP:egpText(12,"Bearing (Cam): "+round(-Target:yaw()),ScrSize/2+vec2(+40,+64))
+    
+    EGP:egpText(13,"CustomVar: "+CustomVar,ScrSize/2+vec2(+40,+76))
+    
+    #For Manual Arty shooting
+    EGP:egpText(14,"Predicted Shot (Horizontal Reach): "+round(-(MuzVel*cos(Ang:pitch()))*(MuzVel*sin(Ang:pitch())/toUnit("m",gravity())),1)+"m",
+        ScrSize/2+vec2(+40,+96))
+        
+    EGP:egpText(15,"ETA: "+round(abs(MuzVel*sin(Ang:pitch())/toUnit("m",gravity())),1)+" seconds",
+        ScrSize/2+vec2(+40,+108))
+    
+    
+    rangerFilter(Gun)
+    Range=round(toUnit("m",Gun:pos():distance(rangerOffset(1000000,Gun:pos(),Gun:forward()):position())),1)
+    
+    #Gradual Aim
+    if (PitchL>=360|( -PitchL < Ang:pitch() + clamp(El,-Speed,Speed) & Ang:pitch() + clamp(El,-Speed,Speed) < PitchL )){
+        Ang=Ang+clamp(ang(vec(El,0,0)),-Speed,Speed)
+    }
+    if(YawL>=360|(-YawL < Ang:yaw()+clamp(Be,-Speed,Speed) & Ang:yaw()+clamp(Be,-Speed,Speed)<YawL)){
+        Ang=Ang+clamp(ang(vec(0,Be,0)),-Speed,Speed)
+    }
+    
+    holoAng(2,Parent:toWorld(ang(vec(0,Ang:yaw()%360,0))))
+    holoAng(1,Parent:toWorld(Ang))
+    
+    }
+    
+
+}

@@ -1,0 +1,200 @@
+@name Aiming Computer V3 Control Chip
+@inputs TarAng:angle Base:entity [Weapon AmmoBox BallisticsComputer]:wirelink Active Selected IDF TarThePos [TarPos TarVel]:vector SlaveEnt:entity Fire Reload Unload
+@inputs Rangetable:table
+@outputs Base:entity [Weapon AmmoBox]:wirelink Label:string Active Selected Angle:angle Ang Fire Reload Unload
+@outputs Rangetable:table
+@persist [CurAngle MinLimits MaxLimits RotSpeed]:angle Gun:entity Slave:wirelink WeaponEnt:entity MuzVel Ang TarVelFinal:vector
+@persist DONTTURN
+@trigger 
+@strict
+
+#INSTRUCTIONS#
+#[
+Set the params!
+Constraint lock the gun to the chip!
+You just need to wire the wirelinks, the rest will be done by the EGP Chip!
+Something like that, at least.
+
+Rangetable is from the Ranging Table Generator chip. I, Basipek, have an edited version #08.04.2024
+of it just to give me an output instead. You can wire that up to have a more 
+accurate TarThePos and an actually working IDF
+
+ACF has Ballistics Computers now; if you have one wired up, this chip'll interact with it.
+
+basipekgaming@gmail.com
+]#
+
+function number getAngForDist(Dist:number,Table:table,IDF:number) { #08.04.2024
+    if (Dist) {#Dist in meters
+        local AngOut=0
+        foreach (K:number,I:vector = Table) {
+            if (((I:x()>Dist&IDF&I:y()>45)|(I:x()<Dist&!IDF&I:y()<45))) {
+                local IndOff=0
+                if (IDF) {IndOff=1}else{IndOff=-1}
+                AngOut=I:y()+(I:y()-Table[K+IndOff,vector]:y())/(I:x()-Table[K+IndOff,vector]:x())*(Dist-I:x())
+                return AngOut
+            }else{
+                continue
+            }
+        }
+    }
+    return 0
+}
+function number getETAForDist(Dist:number,Table:table) { #08.04.2024
+    if (Dist) {#Dist in meters
+        local AngOut=0
+        foreach (K:number,I:vector = Table) {
+            if (((I:x()>Dist&IDF&I:y()>45)|(I:x()<Dist&!IDF&I:y()<45))) {
+                local IndOff=0
+                if (IDF) {IndOff=1}else{IndOff=-1}
+                AngOut=I:z()+(I:z()-Table[K+IndOff,vector]:z())/(I:x()-Table[K+IndOff,vector]:x())*(Dist-I:y())
+                return AngOut
+            }else{
+                continue
+            }
+        }
+    }
+    return 0
+}
+
+if (0){Base=noentity(),Active=Selected=0,Weapon=AmmoBox=nowirelink(),Rangetable=table(),Fire=Unload=Reload=0}
+Weapon=Weapon
+Base=Base
+Active=Active
+Selected=Selected
+AmmoBox["Active",number]=Selected
+AmmoBox=AmmoBox
+Rangetable=Rangetable
+
+Gun=Weapon["Entity",entity]
+if (!Base || !Weapon || !Gun:isValid()) {exit()}
+
+if (first() || dupefinished()) {
+    #PARAMS#
+    #Code taken from burnto1122 and modified
+    local Elevation = 85
+    local Depression = 45
+    local Yaw = 360
+    RotSpeed = ang(2)
+    
+    Label="Gun1"
+    entity():setName("Aiming Computer V3 Control Chip: "+Label)
+    DONTTURN=1#FOR ACF TURRETS
+    
+    MinLimits = -ang(Elevation, Yaw, 1)
+    MaxLimits = ang(Depression, Yaw, 1)
+    
+    Base = Base
+    
+    CurAngle=ang(0)
+    if (dupefinished()) {reset()}
+}
+
+event tick() {
+    if (!entity():isFrozen()&!entity():isPlayerHolding()){entity():propFreeze(1)}
+    if (!Base || !Weapon) {exit()}
+    if (SlaveEnt){if(SlaveEnt:owner()==owner()){Slave=SlaveEnt:wirelink()}}
+    if (Active&Slave) {
+        Slave["Weapon",wirelink]=Weapon
+        Slave["TarAng",angle]=TarAng
+        Slave["TarPos",vector]=TarPos
+        Slave["TarVel",vector]=TarVel
+        Slave["TarThePos",number]=TarThePos
+        Slave["IDF",number]=IDF
+        Slave["Active",number]=Active
+        Slave["Selected",number]=Selected
+        Slave["Rangetable",table]=Rangetable
+        reset()
+    }
+    if (!Active) {entity():setAng(CurAngle+Base:angles()),exit()}
+    
+    MuzVel=max(Weapon["Muzzle Velocity",number],0)
+    
+    WeaponEnt=Weapon["Entity",entity]
+    if (WeaponEnt:isValid()) {
+        TarVelFinal=TarVel-WeaponEnt:vel()
+    }else{
+        TarVelFinal=TarVel-Base:vel()
+    }
+    
+    Weapon["Fire",number]=Fire=Fire
+    Weapon["Reload",number]=Reload=Reload
+    Weapon["Unload",number]=Unload=Unload
+    
+    #From V2
+    if(TarPos!=vec(0)&TarThePos&WeaponEnt:isValid()){
+        if (BallisticsComputer){
+            
+            BallisticsComputer["Position",vector]=TarPos
+            BallisticsComputer["Velocity",vector]=TarVel-Base:vel()#TarVelFinal
+            
+            BallisticsComputer["Calculate",number]=1
+            
+            Target=BallisticsComputer["Angle",angle]
+            ETA=BallisticsComputer["ETA",number]
+        }else{
+            if (Rangetable) {
+                ETA=getETAForDist(TarPos:distance(WeaponEnt:pos())/39.37,Rangetable)
+            }else{
+                ETA=(TarPos:distance(WeaponEnt:pos())/(MuzVel/39.37))
+            }
+            
+            if (TarVelFinal&MuzVel) {
+                Target=((TarPos+(TarVelFinal*ETA))-WeaponEnt:pos()):toAngle()
+                Weapon["Target Pos",vector]=(TarPos+(TarVelFinal*ETA))
+            }elseif(WeaponEnt:isValid()){
+                Target=(TarPos-WeaponEnt:pos()):toAngle()
+                Weapon["Target Pos",vector]=TarPos
+            }
+            if (MuzVel) {
+                DistR=TarPos:distance(WeaponEnt:pos())
+                #Height=(TarPos-WeaponEnt:pos()):z()
+                if (Rangetable ) {
+                    Ang=getAngForDist(DistR/39.37,Rangetable,0) #08.04.2024
+                }else{
+                    Ang=asin(DistR*gravity()/(MuzVel*39.37*MuzVel*39.37))/2
+                        #abs(atan((fromUnit("m/s",MuzVel)^2 - sqrt(fromUnit("m/s",MuzVel)^4 - gravity() * (gravity() * DistR^2 + 2 * Height * fromUnit("m/s",MuzVel)^2 + acfDragDiv() * DistR^2))) / (gravity() * DistR)))
+                        #asin(DistR*gravity()/(fromUnit("m/s",MuzVel)*fromUnit("m/s",MuzVel)))/2
+                }
+                Target=Target+ang(-Ang,0,0)
+            }
+        }
+    }else{Target=TarAng,Weapon["Target Pos",vector]=TarPos
+        if (BallisticsComputer){BallisticsComputer["Calculate",number]=0}
+    }
+    
+    
+    #Code taken from burnto1122 and modified
+    Angle = Target*Active
+    Angle[3]=Base:angles():roll()
+    if(IDF&MuzVel&Rangetable){Angle[1]=-getAngForDist(DistR/39.37,Rangetable,1)}#IDF Needs rangetable
+    if (!Gun:isValid()|DONTTURN) {exit()}
+    local GunYaw = Base:toLocal(Gun:angles()):yaw()
+    local AngleYaw = Base:toLocal(Angle):yaw()
+    
+    # Rotate around if it hit yaw limit.
+    if (abs(GunYaw - AngleYaw) > 360) {
+        Angle = Base:angles()
+    }
+    Clamped = Gun:toLocal(Base:toWorld(clamp(Base:toLocal(Angle), MinLimits, MaxLimits)))
+    CurAngle=clamp(Clamped,-RotSpeed,RotSpeed)*Active+CurAngle
+    CurAngle[3]=Base:angles():roll()
+    entity():setAng(CurAngle+Base:angles())
+}
+#[
+
+This one only moves the E2 to aim the selected weapon which will be ballsocketed to the chip.
+Gradually reaches the angle using setAng
+Needs limits based on a "base"
+Active only when 'selected' by EGP Chip
+Maybe EGP Chip should use Wirelinks of these ones to choose and manage them?
+
+Should maybe allow for a zeroing offset
+
+ONLY TAKES ANGLE
+VECTOR OR ENTITY BASED TARGETING SHALL HAVE A CHIP TO PUNCH OUT AN ANGLE FOR THIS ONE
+CALL IT "Aiming Computer V3 Targeting Add-on"
+Edit: ok maybe a little vector based targeting, a handful (added it after all :pensive:)
+
+]#
+

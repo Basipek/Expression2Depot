@@ -1,0 +1,22 @@
+@name chat bomber 
+@persist Name:string Tar:entity P:entity
+runOnTick(1)
+
+Name = "nothing"
+
+if (lastSaid() == "curse") { Name = lastSpoke():name() } #text is what do you want them to say
+
+if (findCanQuery()) {Tar = findPlayerByName(Name)}
+
+if (changed(Tar:isValid()) | changed(Tar:isAlive()) & Tar:isAlive())
+ { P = propSpawn("models/props_phx/amraam.mdl",Tar:pos(),1),P:propBreak() }
+
+
+#[
+    Documentation and examples are available at:
+    https://github.com/wiremod/wire/wiki/Expression-2
+
+    Discord is available at https://discord.gg/cqJ45CT
+    Reddit is available at https://www.reddit.com/r/wiremod
+    Report any bugs you find here https://github.com/wiremod/wire/issues
+]#

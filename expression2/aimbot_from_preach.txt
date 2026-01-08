@@ -1,0 +1,56 @@
+@persist Target:entity
+
+if(first()){
+#[---------------------------------------------------[ Settings ]--------------------------------------------------]#
+#[---------------------------------------------------[   Core   ]--------------------------------------------------]#
+    runOnTick(1)
+    runOnKeys(owner(), 1)
+  #-----------------[ Auto Run ]------------------#
+    
+  #-----------------[ Functions ]-----------------#
+    function number targetInView(){
+        local Vec1 = owner():shootPos()
+        local Aim  = owner():eye()
+        local Dot  = 0
+        local Range = 0
+        if(!Target){
+            foreach(K,V:entity=players()){
+                if(V == owner()){ continue }
+                local Vec2   = V:attachmentPos("anim_attachment_head")
+                local Dif    = Vec2-Vec1
+                local Length = Dif:length()
+                Dot    = Aim:dot( Dif ) / Length
+                Range  = 1-(5*0.5/Length)
+                if( Dot > Range ){
+                    Target = V
+                    return 1
+                }
+            }
+        } else {
+            local Vec2   = Target:attachmentPos("anim_attachment_head")
+            local Dif    = Vec2-Vec1
+            local Length = Dif:length()
+            Dot    = Aim:dot( Dif ) / Length
+            Range  = 1-(5*0.5/Length)
+            if( Dot > Range){
+                return 1
+            } else {
+                Target = noentity()
+            }
+            
+        }
+        return 0
+    }
+}
+
+
+
+Alt = owner():keyWalk()
+if(Alt){
+    if(targetInView()){
+        local HeadPos  = Target:attachmentPos("anim_attachment_head")
+        local ShootPos = owner():shootPos()
+        local DifPos   = ( HeadPos - ShootPos ):toAngle()
+        owner():plySetAng( DifPos )
+    }
+}

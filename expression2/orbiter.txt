@@ -1,0 +1,21 @@
+@name orbiter
+@inputs 
+@outputs 
+@persist [VECC Vec]:vector A X Y E2S
+@trigger 
+runOnTick(1)
+A++
+X++
+Y++
+entity():isWeldedTo():setMass(1)
+if (A==1){
+VECC=vec(sin(X)*100,cos(Y)*100,50),A=0}
+if (tickClk()) {
+Vec=((owner():attachmentPos("eyes")-entity():pos())+VECC)
+    entity():applyForce(Vec+$Vec*100)
+}
+
+if (owner():isCrouch()) {Vec=((owner():aimPos()-entity():pos())+VECC)
+    entity():applyForce(Vec+$Vec*10000)}
+
+

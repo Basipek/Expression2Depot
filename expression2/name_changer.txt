@@ -1,0 +1,7 @@
+@name name changer
+runOnChat(1)
+if (chatClk(owner())) {
+    hideChat(1)
+    chatPrint(vec(50,60,10),"poopybutthole: ",vec(255),""+owner():lastSaid())
+    
+}

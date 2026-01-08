@@ -1,0 +1,10 @@
+@name serving queue
+@inputs Add Next Prev Reset
+@outputs Now Nextnum
+@persist Last Nown
+@trigger 
+
+if(first()|Reset){Now=Nown=0,Nextnum=1}
+if(Add){Nextnum++}
+if(Next){Now=Nown=Nown+1}
+if(Prev){Now=Nown=Nown-1}

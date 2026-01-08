@@ -1,0 +1,31 @@
+@name Aiming Computer
+@inputs [Tar, TarVel]:vector Gun:entity MuzVel
+@outputs V H Fire Poop El Be Angles:angle Dist DistR DistB
+@persist El Be TarP:vector Dist DistR Angle 
+@trigger 
+
+if(first()){Angle=0}
+event tick() {
+    TarP=(Tar+(TarVel*(Tar:distance(Gun:pos())/fromUnit("m",MuzVel))))
+    
+    #get the degree for required distance
+    Poop=asin(2*(TarP:distance(Gun:pos()))/(fromUnit("m/s",MuzVel)*fromUnit("m/s",MuzVel)*gravity()))
+    
+    #get the acquired distance deviation
+    Dist=(fromUnit("m/s",MuzVel))*cos(Poop)*((fromUnit("m/s",MuzVel))*sin(Poop)/gravity())
+    DistR=TarP:distance(Gun:pos())
+    
+    #Debug Values
+    DistB=(fromUnit("m/s",MuzVel))*cos(Angle)*((fromUnit("m/s",MuzVel))*sin(Angle)/gravity())
+    Angles=Gun:angles()
+    
+    #adjust degree for deviation
+    Angle=(Poop*(DistR/Dist))
+    El=-Gun:elevation(TarP)+Angle
+    Be=-Gun:bearing(TarP)
+    
+    V=(El+$El*5)
+    H=(Be+$Be*5)
+    
+    Fire=(abs(El)+abs(Be))<0.5
+}

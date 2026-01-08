@@ -1,0 +1,17 @@
+@name follower
+@inputs 
+@outputs 
+@persist Tar:entity P:entity
+@trigger 
+if(first()|duped()){P=entity():isWeldedTo()
+Tar=findPlayerByName("Basipek")
+noCollide(P,Tar)}
+runOnTick(1)
+entity():setAlpha(0)
+P:applyForce(
+(
+(
+Tar:pos()+vec(0,0,200)-P:pos())*10))
+
+if(owner():keyPressed("B")){selfDestructAll()}
+

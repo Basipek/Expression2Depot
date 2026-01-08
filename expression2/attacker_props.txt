@@ -1,0 +1,24 @@
+@name attacker props
+@inputs 
+@outputs 
+@persist Ar:array Tar:entity Tarpos:vector A B
+@trigger 
+if(first()){A=1}
+if(first()|clk("B")){timer("B",100)}
+if(owner():keyAttack2()&owner():weapon():type()=="weapon_crowbar"){Ar:pushEntity(owner():aimEntity())}
+if(owner():keyZoom()&owner():weapon():type()=="weapon_crowbar"){
+    A=0,B=1,Tar=owner():aimEntity(),hint("target:"+Tar:model(),1)}
+if(owner():keyPressed("N")&owner():weapon():type()=="weapon_crowbar"){
+    A=1,B=0,hint("Target cleared",1)}
+
+if(B&clk("B")){Tarpos=Tar:pos()}
+if(A&clk("B")){Tarpos=owner():aimPos()}
+if(first()|clk("A")){timer("A",10),if(owner():weapon():type()=="weapon_crowbar"&owner():isCrouch()){
+    foreach(K,V:entity=Ar){V:applyForce((Tarpos-V:pos())*V:mass()*1.5)}}}
+
+
+if(owner():keyPressed("R")&owner():weapon():type()=="weapon_crowbar"){
+    foreach(K,V:entity=Ar){V:propDelete()},Ar:clear(),hint("cleared and deleted attackers",3)}
+if(owner():keyPressed("M")&owner():weapon():type()=="weapon_crowbar"){
+    foreach(K,V:entity=Ar){V:propBreak()},Ar:clear(),hint("tried to break attackers (you must press R to clear)",3)}
+

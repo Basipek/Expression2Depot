@@ -1,0 +1,88 @@
+@name Vehicle Control v2
+@inputs Pod:wirelink [RFront,LFront, RB, LB, BaseEnt]:entity Engine:wirelink EGP:wirelink
+@outputs Gear Clutch Brake Steer
+@persist [RF LF RBF LBF]:angle Actived Active Steer Throttle Base:entity Driver:entity
+@trigger 
+
+if(first()|dupefinished()){Active=0,Actived=0,Steer=0,Throttle=0
+    
+    Driver=noentity()
+    
+}
+
+event tick() {
+    
+    
+    #Default Text Colour
+    EGPColour=vec4(255,0,0,255)
+    
+    if (!BaseEnt) {Base=entity()} else{
+        Base=BaseEnt
+    }
+    
+    
+    Throttle=Throttle+(Pod["W",number]|Pod["S",number])*((Throttle<50)||((Throttle<100)&Pod["Shift",number]&(Pod["W",number]|Pod["S",number])))
+    -(Throttle/10)*(!(Pod["W",number]|Pod["S",number])|(!Pod["Shift",number]&(Throttle>51)))
+    Engine["Throttle",number]=Throttle
+    
+    Clutch=!((Pod["W",number]|Pod["S",number]))
+    
+    Gear=1+(Pod["S",number])
+    
+    Brake=10*((Pod["Space",number])|!Active)
+    
+    if(Actived&(Pod["R",number])){Active=!Active,Actived=!Actived}
+    
+    Actived=!(Pod["R",number])
+    
+    Engine["Active",number]=Active
+    
+    Steer=clamp(((Steer+(Pod["A",number]-Pod["D",number])/10))-(Steer/10)*!(Pod["A",number]|Pod["D",number]),-1,1)
+    
+    if(RFront&Base){
+        RAng=RFront:toLocal(Base:toWorld(ang(vec(0,30*Steer,0))))
+        RF=ang(vec(0,RAng:yaw(),0))
+        RFront:applyAngForce((RF+$RF*5)*RFront:mass()*50-RFront:angVel()*5)
+    }
+    
+    if(LFront&Base){
+        LAng=LFront:toLocal(Base:toWorld(ang(vec(0,30*Steer,0))))
+        LF=ang(vec(0,LAng:yaw(),0))
+        LFront:applyAngForce((LF+$LF*5)*LFront:mass()*50-LFront:angVel()*5)
+    }
+    
+    if(RB&Base){
+        RBAng=RB:toLocal(Base:toWorld(-ang(vec(0,30*Steer,0))))
+        RBF=ang(vec(0,RBAng:yaw(),0))
+        RB:applyAngForce((RBF+$RBF*5)*RB:mass()*50-RB:angVel()*5)
+    }
+    
+    if(LB&Base){
+        LBAng=LB:toLocal(Base:toWorld(-ang(vec(0,30*Steer,0))))
+        LBF=ang(vec(0,LBAng:yaw(),0))
+        LB:applyAngForce((LBF+$LBF*5)*LB:mass()*50-LB:angVel()*5)
+    }
+    
+    if (EGP&Pod["Driver",entity]) {
+        
+        if(Pod["Driver",entity]!=Driver) {Driver=Pod["Driver",entity]}
+            
+        ScrSize=egpScrSize(Driver)
+        
+        EGP:egpText(1,"RPM: "+Engine["RPM",number],ScrSize/2+vec2(0,ScrSize[2]/2-40))
+        EGP:egpColor(1,EGPColour)
+        EGP:egpText(2,"Fuel: "+round(Engine["Total Fuel",number]),ScrSize/2+vec2(0,ScrSize[2]/2-20))
+        EGP:egpColor(2,EGPColour)
+        EGP:egpText(3,"Heat: "+round(Engine["EngineHeat",number]),ScrSize/2+vec2(100,ScrSize[2]/2-40))
+        EGP:egpColor(3,EGPColour)
+        EGP:egpText(4,"Fuel Use: "+round(Engine["Fuel Use",number]),ScrSize/2+vec2(100,ScrSize[2]/2-20))
+        EGP:egpColor(4,EGPColour)
+        EGP:egpText(5,"Engine Health: "+Engine["Entity",entity]:acfPropHealth()+"/"+Engine["Entity",entity]:acfPropHealthMax(),ScrSize/2+vec2(250,ScrSize[2]/2-40))
+        EGP:egpColor(5,EGPColour)
+        
+        EGP:egpText(6,"Speed: "+round(toUnit("m",Engine["Entity",entity]:vel():length())*3.6)+"km/h",ScrSize/2+vec2(-150,ScrSize[2]/2-20))
+        EGP:egpColor(6,EGPColour)
+        
+    }
+}
+

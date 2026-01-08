@@ -1,0 +1,13 @@
+@name kill reporter
+@inputs 
+@outputs 
+@persist 
+@trigger 
+
+runOnDeath(1)
+if(lastDeathAttacker():name()!=""&lastDeathAttacker():name()!=lastDeath():name()){
+chatPrint(vec(0,255,100),lastDeath():name(),vec(255)," was killed by ",vec(255,0,0),lastDeathAttacker():name())
+}
+if(lastDeathAttacker():name()==""|lastDeathAttacker():name()==lastDeath():name()){chatPrint(vec(0,255,100),lastDeath():name(),vec(0,100,255)," suicided or killed by a non player entity.")
+}
+

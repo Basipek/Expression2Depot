@@ -1,0 +1,87 @@
+@name Vehicle Helicopter Control Set Ang
+@inputs Pod:wirelink BaseEnt:entity Engine:wirelink EGP:wirelink ReverseParent:entity Fuel [YawE RollEL RollER]:entity
+@outputs Gear Clutch Brake Steer Pitch Yaw Roll Throttle
+@persist Actived Active Pitch Steer Yaw Roll Throttle Base:entity Driver:entity EGPColour:vector4
+@trigger 
+
+#Shift is reversed: It instead makes the throttle stick to 50%
+#Fuel is for when the engine's output is unreliable
+
+if(first()|dupefinished()){Active=0,Actived=0,Pitch=Yaw=Roll=0,Steer=0,Throttle=0
+    
+    Driver=noentity()
+    #Default Text Colour
+    EGPColour=vec4(255,0,0,255)
+    
+}
+
+event tick() {
+    entity():propFreeze(!entity():isPlayerHolding())
+    if (RollEL) {RollEL:propFreeze(!RollEL:isPlayerHolding())}
+    if (RollER) {RollER:propFreeze(!RollEL:isPlayerHolding())}
+    if (YawE) {YawE:propFreeze(!YawE:isPlayerHolding())}
+    
+    if (!BaseEnt) {Base=entity()} else{
+        Base=BaseEnt
+    }
+    
+    Throttle=clamp((clamp(-BaseEnt:parent():vel():z()*10,-0.1*(!Pod["Space",number]),100)+Throttle+Pod["Space",number]*((Throttle<50)||((Throttle<100)&Pod["Space",number]))
+    -(Throttle/10)*(!(Pod["Space",number]|Pod["Alt",number])))*(!Pod["Alt",number]),-100,100)
+    Engine["Throttle",number]=Throttle
+    
+    if (Pod["Active",number]){
+        
+        Clutch=Active#!((Pod["W",number]|Pod["S",number]))
+        
+        Gear=1+(Pod["S",number])
+        
+        Brake=10*((Pod["Space",number])|!Active)
+        
+        if(Actived&Pod["Driver",entity]:keyPressed("I")){Active=!Active,Actived=!Actived}
+        
+        Actived=!(Pod["Driver",entity]:keyPressed("I"))
+        
+        Engine["Active",number]=Active
+        
+        Pitch=clamp(((Pitch+(Pod["S",number]-Pod["W",number])/200))-(Pitch/10)*!(Pod["S",number]|Pod["W",number]),-1,1)
+        
+        Yaw=0
+        Steer=clamp(((Steer+(Pod["D",number]-Pod["A",number])/200))-(Steer/10)*!(Pod["D",number]|Pod["A",number]),-1,1)
+        
+        Roll=clamp(((Roll+(Pod["A",number]-Pod["D",number])/200))-(Roll/10)*!(Pod["A",number]|Pod["D",number]),-1,1)
+    }
+    
+    entity():setAng(Base:toWorld(ang(vec(30*Pitch,0,30*Roll))))#entity():setAng(Base:toWorld(ang(vec(30*Pitch,0,0))))
+    if (YawE) {YawE:setAng(Base:toWorld(ang(vec(0,30*Yaw,0))))}
+    if (RollEL) {RollEL:setAng(Base:toWorld(ang(vec(30*Roll,0,0))))}
+    if (RollER) {RollER:setAng(Base:toWorld(ang(vec(-30*Roll,0,0))))}
+    if (ReverseParent) {#in case we want to move some wheels the other way around
+        if (!ReverseParent:isFrozen()) {ReverseParent:propFreeze(1)}
+        ReverseParent:setAng(Base:toWorld(ang(vec(0,-30*Steer,0))))
+    }
+}
+
+if (EGP) {
+    
+    if(Pod["Driver",entity]!=Driver) {Driver=Pod["Driver",entity]}
+        
+    ScrSize=egpScrSize(Driver)
+    EGP:egpText(1,"RPM: "+Engine["RPM",number],ScrSize/2+vec2(0,ScrSize[2]/2-40))
+    EGP:egpColor(1,EGPColour)
+    EGP:egpText(2,"Fuel: "+round(Engine["Total Fuel",number]+Fuel),ScrSize/2+vec2(0,ScrSize[2]/2-20))
+    EGP:egpColor(2,EGPColour)
+    EGP:egpText(3,"Heat: "+round(Engine["EngineHeat",number]),ScrSize/2+vec2(100,ScrSize[2]/2-40))
+    EGP:egpColor(3,EGPColour)
+    EGP:egpText(4,"Fuel Use: "+round(Engine["Fuel Use",number]),ScrSize/2+vec2(100,ScrSize[2]/2-20))
+    EGP:egpColor(4,EGPColour)
+    EGP:egpText(5,"Engine Health: "+Engine["Entity",entity]:acfPropHealth()+"/"+Engine["Entity",entity]:acfPropHealthMax(),ScrSize/2+vec2(250,ScrSize[2]/2-40))
+    EGP:egpColor(5,EGPColour)
+    
+    EGP:egpText(6,"Speed: "+round(toUnit("m",BaseEnt:vel():length())*3.6)+"km/h",ScrSize/2+vec2(-150,ScrSize[2]/2-20))
+    EGP:egpColor(6,EGPColour)
+    
+    EGP:egpText(7,"Throttle: "+round(Throttle)+"%",ScrSize/2+vec2(-150,ScrSize[2]/2-40))
+    EGP:egpColor(7,EGPColour)
+}
+interval(500)
+

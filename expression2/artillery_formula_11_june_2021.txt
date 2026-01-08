@@ -1,0 +1,16 @@
+@name Artillery formula 11 June 2021
+@inputs TarP:vector Gun:entity MuzVel
+@outputs Angle
+@persist DistR Dist AngleRaw
+@trigger 
+
+
+#get the degree for required distance
+AngleRaw = asin(2*(TarP:distance(Gun:pos()))/(fromUnit("m/s",MuzVel)*fromUnit("m/s",MuzVel)*gravity()))
+
+#get the acquired distance deviation
+Dist=(fromUnit("m/s",MuzVel))*cos(AngleRaw)*((fromUnit("m/s",MuzVel))*sin(AngleRaw)/gravity())
+DistR=TarP:distance(Gun:pos())
+
+#adjust degree for deviation
+Angle=AngleRaw*(DistR/Dist)

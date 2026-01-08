@@ -1,0 +1,28 @@
+@name basic holo
+@inputs
+@outputs 
+@persist A B [Modelply Modelwep]:string Tar:entity
+@trigger 
+
+runOnChat(1)
+if(first()){timer("A",10)}
+if(clk("A")){timer("A",10)}
+if(chatClk(owner())&owner():lastSaid():lower():explode(" ")[1,string]=="/show"&
+owner():lastSaid():lower():explode(" ")[2,string]!=""){
+    Name=owner():lastSaid():lower():explode(" ")[2,string]
+    Tar=findPlayerByName(Name)
+    hideChat(1)
+}
+if (clk("A")) {
+
+Modelply=Tar:model()
+Modelwep=Tar:weapon():model()
+holoCreate(1,(entity():pos()+vec(0,0,60)),vec(1),ang(),vec(255),Modelwep)
+holoCreate(2,(entity():pos()+vec(0,50,0)),vec(1),ang(),vec(255),Modelply)
+
+}
+if(clk("A")){
+B++
+holoAng(1,ang(vec(0,B,0)))
+holoAng(2,ang(vec(0,B,0)))
+}

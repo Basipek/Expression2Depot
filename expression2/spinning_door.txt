@@ -1,0 +1,14 @@
+@name spinning door
+@inputs 
+@outputs 
+@persist MODEL:string P:entity P2:entity A
+@trigger 
+if (first()){MODEL="models/props_c17/fence03a.mdl"
+P=propSpawn(MODEL,entity():pos()+vec(0,0,50),1)
+P2=propSpawn(MODEL,entity():pos()+vec(0,0,50),ang(vec(0,0,0)),1)
+P2:setAng(ang(vec(0,A+90,0)))
+}
+runOnTick(1)
+A++
+P:setAng(ang(vec(0,A,0)))
+P2:setAng(ang(vec(0,A+90,0)))

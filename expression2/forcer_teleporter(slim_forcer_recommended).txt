@@ -1,0 +1,12 @@
+@name forcer teleporter(slim forcer recommended)
+@inputs Ent:entity
+@outputs 
+@persist Target:entity
+@trigger 
+runOnChat(1)
+runOnKeys(owner(),1)
+function string ls(Index){
+    return owner():lastSaid():lower():explode(" ")[Index,string]    
+}
+if(chatClk(owner())&ls(1)=="/target"&ls(2)!=""){Target=findPlayerByName(ls(2)),hideChat(1) }
+if(owner():keyPressed("B")){Ent:setAng(((owner():aimPos()-Ent:pos()):toAngle())+ang(vec(90,0,0)) ) ,Ent:setPos(Target:pos()+vec(0,0,10))}

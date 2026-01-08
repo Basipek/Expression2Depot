@@ -1,0 +1,37 @@
+@name Detonator
+@inputs 
+@outputs A
+@persist Bombs:array
+@trigger 
+
+runOnKeys(owner(),1)
+if(owner():keyPressed("L")){hint(owner():aimEntity():model(),1 )}
+
+#Arm/Launch
+if(owner():keyPressed("B")&keyClk()){findInSphere(entity():pos(),10000),Bombs=findToArray(),foreach(K,V:entity=Bombs){
+    Wirelink=V:wirelink()
+    Wirelink["Fire",number]=1
+    Wirelink["Launch",number]=1
+    Wirelink["Arm",number]=1
+    }
+}else{
+    Wirelink["Fire",number]=0
+}
+    
+    #Detonate
+if(owner():keyPressed("N")){findInSphere(entity():pos(),10000),Bombs=findToArray(),foreach(K,V:entity=Bombs){
+    Wirelink=V:wirelink()
+    Wirelink["Arm",number]=1
+    Wirelink["Detonate",number]=1
+    A=1
+    }
+}else{A=0,Wirelink["Detonate",number]=0,Wirelink["Arm",number]=0}
+if(owner():keyPressed("M")){Wirelink=owner():aimEntity():wirelink()
+    Wirelink["Detonate",number]=1
+    Wirelink["Arm",number]=1
+    Wirelink["Fire",number]=1
+    Wirelink["Launch",number]=1
+}else{Wirelink["Detonate",number]=0
+    Wirelink["Arm",number]=0
+    Wirelink["Fire",number]=0
+    Wirelink["Launch",number]=0}

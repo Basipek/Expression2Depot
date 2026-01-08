@@ -1,0 +1,22 @@
+@name Ballistic Computer
+@inputs Muzvel  Gun:entity
+@outputs Fire Distgoing Distneed Angle
+@persist Distpres Dist Offset:vector Ang Tar:vector 
+@trigger 
+
+runOnTick(1)
+Tar=owner():eyeTrace():pos()
+if(first()){Ang=0}
+Distgoing=Distpres
+Distneed=Dist
+Angle=Ang
+Dist=(Tar):distance((Gun:pos()))/22.5
+Offset=Tar-Gun:pos()
+Distpres=cos(Ang)*Muzvel*(sin(Ang)*Muzvel/6)
+if(Ang>=-90&&Ang<=45&&Dist<=Distpres){if(Distpres-Dist<10){Ang=Ang-0.01}else{Ang=Ang-0.1}}elseif
+(Ang>=-90&&Ang<=45&&Dist>=Distpres){if(Distpres-Dist>10){Ang=Ang+0.01}else{Ang=Ang+0.1}}
+if(Ang<-90){Ang=-90}
+if(Ang>45){Ang=45}
+
+Gun:setAng(ang(Offset:toAngle():pitch()-Ang,Offset:toAngle():yaw(),Offset:toAngle():roll()))
+Fire=owner():keyPressed("B")

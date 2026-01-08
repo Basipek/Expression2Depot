@@ -1,0 +1,13 @@
+@name jump pad
+@inputs
+@outputs 
+@persist P:entity Tar:ranger Ranger:wirelink
+@trigger 
+#you must place ranger on this
+runOnTick(1)
+
+Ranger=entity():isWeldedTo():wirelink()
+
+P=Ranger["Entity",entity]
+
+if (P:isPlayer()){P:applyPlayerForce(entity():pos()-vec(0,30,100))}else{P:applyForce(entity():pos()-vec(0,30,100))}

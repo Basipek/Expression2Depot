@@ -1,0 +1,15 @@
+@name Magnet
+@inputs 
+@outputs 
+@persist Ents:array
+@trigger
+
+runOnTick(1)
+findIncludeClass("prop")
+findInSphere(entity():pos(),10000) 
+Ents=findToArray()
+for(K=1,Ents:count()){if(Ents[K,entity]:propPhysicalMaterial()=="metal"){
+    Ents[K,entity]:applyForce((entity():pos()-Ents[K,entity]:pos())*50)
+    }
+    }
+

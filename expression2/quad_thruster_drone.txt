@@ -1,0 +1,49 @@
+@name Quad Thruster Drone
+@inputs Base:angle GPS:vector A D W S Space Alt
+@outputs FL FR BL BR F Y
+@persist AngF:angle P R PI RI G F Yaw
+@trigger 
+@strict
+
+#Outputs:
+#F-B L-R are bottom facing thrusters for gyro
+#F is forwards facing thruster
+#Y is for yaw controlling thrusters
+
+#Inputs:
+#Base is a gyro with 0-180 for forwards facing
+#GPS is for dampening delta Z
+
+
+if (first()) {PI=RI=Yaw=0}
+event tick() {
+    if (!Base) {exit()}
+    
+    Ang=Base
+    
+    P=Ang:pitch()
+    PI=PI+P/50
+    if ( ( PI>0&&$PI<0)  || ( PI<0&&$PI>0 ) ) {PI=0}
+    
+    R=-Ang:roll()
+    RI=RI+R/50
+    if ( ( RI>0&&$RI<0)  || ( RI<0&&$RI>0 ) ) {RI=0}
+    
+    Yaw=((Yaw+(D-A)/20))-(Yaw/2)*!(A|D)
+    
+    Y=(-$Base:yaw()*(Yaw==0)/5-Yaw)#I wired my thrusters wrong so I changed this a bit, be advised!
+    
+    AngF=ang(P+PI,0,R+RI)
+    
+    AngFinal=(AngF+$AngF*5)/20
+    
+    G=clamp(-$GPS:z()/10+ (-$GPS:z()*!Alt)*9/10 ,0,1000)+Space-Alt
+    
+    FL=AngFinal:pitch()+AngFinal:roll()+G , FR=AngFinal:pitch()-AngFinal:roll()+G
+    BL=-AngFinal:pitch()+AngFinal:roll()+G , BR=-AngFinal:pitch()-AngFinal:roll()+G
+    
+    F=((F+(W-S)/10))-(F/10)*!(W|S)
+    
+    
+    
+}

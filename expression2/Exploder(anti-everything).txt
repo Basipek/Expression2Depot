@@ -1,0 +1,36 @@
+@name Exploder(anti-everything)
+@inputs 
+@outputs 
+@persist Found:array
+@trigger 
+runOnChat(1)
+if(chatClk(owner())&owner():lastSaid():lower():explode(" ")[1,string]=="/bam"&owner():lastSaid():explode(" ")[2,string]!=""){
+    findInSphere(entity():pos(),owner():lastSaid():explode(" ")[2,string]:toNumber())
+    Found=findToArray()
+    hideChat(1)
+    foreach(K,V:entity=Found){
+        if(V:model():find("drones")|V:model():find("explosive")){V:dmgApplyDamage(100000)}
+    }
+    
+
+}
+if(chatClk(owner())&owner():lastSaid():lower():explode(" ")[1,string]=="/bom"&owner():lastSaid():explode(" ")[2,string]!=""){
+    findInSphere(entity():pos(),owner():lastSaid():explode(" ")[2,string]:toNumber())
+    Found=findToArray()
+    hideChat(1)
+    foreach(K,V:entity=Found){if(V:owner()!=noentity()&V:owner()!=world()&!V:isPlayer()&!V:isVehicle()){
+    V:dmgApplyDamage(100000)}
+    }
+    
+
+}
+if(chatClk(owner())&owner():lastSaid():lower():explode(" ")[1,string]=="/bomall"&owner():lastSaid():explode(" ")[2,string]!=""){
+    findInSphere(entity():pos(),owner():lastSaid():explode(" ")[2,string]:toNumber() )
+    Found=findToArray()
+    hideChat(1)
+    foreach(K,V:entity=Found){if(V:owner()!=noentity()&V:owner()!=world()&!V:isPlayer()){
+    V:dmgApplyDamage(100000)}
+    }
+    
+
+}

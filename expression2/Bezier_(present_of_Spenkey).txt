@@ -1,0 +1,21 @@
+@name Bezier (present of Spenkey)
+@persist A:number B
+
+interval(10)
+
+if (first()) {holoCreate(1)
+              holoCreate(2)  }
+            
+holoScale(2,vec(2,1,0.2))
+holoModel(1,"hq_sphere")
+findByModel("models/hunter/blocks/cube025x025x025.mdl")
+P1 = findResult(1)
+P2 = findResult(2)
+P3 = findResult(3)
+
+holoPos(1,bezier(P1:pos(),P2:pos(),P3:pos(),A))
+holoPos(2,bezier(P1:pos(),P2:pos(),P3:pos(),0.5)+vec(0,0,8))
+
+A = A+B/50
+if (A>=1) {B-=1}
+elseif (A<=0) {B+=1}

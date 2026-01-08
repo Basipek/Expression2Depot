@@ -1,0 +1,21 @@
+@name Throttle controller
+@inputs Trup Trdown Reset Max
+@outputs Throttle 
+@persist Maxval 
+@trigger 
+
+runOnTick(1)
+if(first()){
+    Maxval=100
+    
+}
+if(Trup){
+    
+    Throttle=Throttle+0.1
+}
+if(Trdown){Throttle=Throttle-0.1}
+if(Reset){Throttle=0}
+if(Max){Throttle=Maxval}
+if(Throttle>Maxval){Throttle=100}
+if(Throttle<0){Throttle=0}
+

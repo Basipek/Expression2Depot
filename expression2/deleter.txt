@@ -1,0 +1,9 @@
+@name deleter
+@inputs 
+@outputs 
+@persist P:entity 
+@trigger 
+runOnChat(1)
+P=entity():isWeldedTo()
+if (owner():lastSaid()=="/break"&lastSaid()=="/break") {hint("broke",5),hideChat(1),P:dmgApplyDamage(9999999),P:propBreak()}
+if(owner():lastSaid()=="/delete"&lastSaid()=="/delete"){P:propDelete()}

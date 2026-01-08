@@ -1,0 +1,36 @@
+@name Gun e2 360 gift from Burnto1122
+@inputs [Driver Gun]:entity
+@persist [MinLimits MaxLimits RotSpeed]:angle Base:entity
+@outputs Inertia:angle
+
+if (first() || dupefinished()) {
+    local Elevation = 90
+    local Depression = 80
+    local Yaw = 360
+    RotSpeed = ang(4)
+    
+    MinLimits = -ang(Elevation, Yaw, 1)
+    MaxLimits = ang(Depression, Yaw, 1)
+
+    Inertia = shiftL(ang(Gun:inertia()))
+    
+    Base = entity()
+}
+
+event tick() {
+    local Angle = Driver:eyeAngles()
+    local Angle2 = Angle
+    local GunYaw = Base:toLocal(Gun:angles()):yaw()
+    local AngleYaw = Base:toLocal(Angle):yaw()
+        
+    # Rotate around if it hit yaw limit.
+    if (abs(GunYaw - AngleYaw) > 360) {
+        Angle2 = Base:angles()
+    }
+        
+    Force = Gun:toWorld(clamp(Gun:toLocal(Angle2), -RotSpeed, RotSpeed))
+    Clamped = clamp(Base:toLocal(Force), MinLimits, MaxLimits)
+    LocalToGun = Gun:toLocal(Base:toWorld(Clamped))
+    
+    Gun:applyAngForce((LocalToGun * 800 - Gun:angVel() * 47) * Inertia)
+}

@@ -1,0 +1,14 @@
+@name talk as another one
+@inputs 
+@outputs 
+@persist Tar:entity 
+@trigger
+runOnChat(1)
+Name="erner"
+Tar=findPlayerByName(Name)
+
+if(chatClk(owner())){
+    hideChat(1)
+    chatPrint(teamColor(Tar:team()),Tar:name(),vec(255),": "+owner():lastSaid())
+}
+    

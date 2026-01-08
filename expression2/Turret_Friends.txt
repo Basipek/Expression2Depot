@@ -1,0 +1,55 @@
+@name Turret Friends (+ACF)
+@inputs 
+@outputs Fire
+@persist V:array Wirelink:wirelink Left Button:string Multi Togl Printcool Tar:entity Turtarset Turtar:entity Turtarpos:vector
+@trigger 
+Left=1
+if(Left){
+    Button="N"
+    Multi = 1
+}else{Button="M",Multi=-1}
+runOnKeys(owner(),1)
+runOnChat(1)
+function string ls(Index){
+    return owner():lastSaid():lower():explode(" ")[Index,string]
+}
+if(Turtar!=noentity()){Turtarpos=Turtar:pos()}
+if(ls(1)=="/target"&ls(2)!=""&chatClk(owner())){hideChat(1),foreach(K,Turret:entity=V)
+    {Wirelink = Turret:wirelink(),Wirelink["Target Ent",entity]=findPlayerByName(ls(2))
+    hint("Target Locked: "+ findPlayerByName(ls(2)):name(),1) }}
+if(first()){timer("A",10)}
+if(owner():keyPressed(Button)){V:pushEntity(owner():aimEntity())}
+if(clk("A")){
+    if(owner():keyPressed("O")){Togl=1}
+    if(owner():keyPressed("I")){Togl=0}
+    timer("A",10)
+    
+    foreach(K,Turret:entity=V){Wirelink = Turret:wirelink()
+        if(owner():keyPressed("P")&owner():keyPressed("L")){
+        if(owner():aimEntity():isWorld()|!owner():aimEntity():isValid())
+        {Wirelink["Target Pos",vector] = owner():aimPos(),Tar=noentity()
+            
+}else{Tar=owner():aimEntity(),Wirelink["Target Ent",entity] = Tar,Wirelink["Target Pos",vector] = Tar:pos()}}
+if(owner():keyPressed("H")){Wirelink["Fire",number]=Fire = 1}else{Wirelink["Fire",number]=Fire=0}
+    if(owner():keyPressed("B")){Wirelink["Reload",number] = 1}else{Wirelink["Reload",number]=0}
+        if(!Togl){
+    if(!owner():keyWalk()){if(Tar:isValid()&!Tar:isWorld()){Wirelink["Target Pos",vector] = Tar:pos()}
+    if(Turtarset){Turret:setAng((Turtarpos-Turret:pos()):toAngle())}
+    else{Turret:setAng((owner():aimPos()-Turret:pos()):toAngle())}
+    entity():setPos(owner():shootPos()-vec(0,0,owner():height()/2)-(owner():right())*50*Multi)
+Turret:setPos(owner():shootPos()-vec(0,0,owner():height()/2)-(owner():right())*50*Multi)}
+    }
+    #second setang for turret lock
+    if(Turtarset){Turret:setAng((Turtarpos-Turret:pos()):toAngle())}
+}
+
+
+}
+if(owner():keyPressed("apostrophe")&!owner():keyWalk()&keyClk(owner())){Turtarset=1,
+    if(!owner():aimEntity():isValid()){Turtarpos=owner():aimPos(),Turtar=noentity(),
+        hint("turrets locked on position",3)}else{Turtar=owner():aimEntity(),hint("turrets locked on entity",3)}}
+if(owner():keyPressed("J")&!owner():keyWalk()&keyClk(owner())){Turtarset=0,Turtar=Tar=noentity(),
+    hint("target lock cleared",3)}
+  if(owner():keyPressed("P")&owner():keyPressed("L")&keyClk(owner())){
+    if(owner():aimEntity():isWorld()|!owner():aimEntity():isValid())
+    {hint("Target Locked: Pos",1)}else{hint("Target Locked: Ent",1)}}

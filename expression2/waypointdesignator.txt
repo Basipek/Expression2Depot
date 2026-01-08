@@ -1,0 +1,54 @@
+@name WaypointDesignator
+@inputs Pod:wirelink Cam:wirelink EGP:wirelink 
+@outputs WPList:array
+@persist WPIndex M1d M2d Mult X Y Z
+@trigger 
+@strict
+
+if(first()){
+    local A=Cam["entity",entity]:pos()
+    X=A:x()
+    Y=A:y()
+    Z=A:z()
+    WPList=array()
+    
+    EGP:egpClear()
+    M1d=M2d=0
+    WPIndex=1
+    Mult=5
+}
+event tick() {
+    W=Pod["W",number]
+    A=Pod["A",number]
+    S=Pod["S",number]
+    D=Pod["D",number]
+    Space=Pod["Space",number]
+    Alt=Pod["Alt",number]
+    M1=Pod["Mouse1",number]
+    M2=Pod["Mouse2",number]
+    
+    
+    X=X+(D-A)*Mult
+    Y=Y+(W-S)*Mult
+    Z=Z+(Space-Alt)*Mult
+    
+    Cam["Position",vector]=vec(X,Y,Z)
+    
+    if (!M1d&M1) {
+        WPList[WPIndex,vector]=vec(X,Y,Z)
+        WPIndex++
+    }
+    if (!M2d&M2) {
+        WPList:popVector()
+        WPIndex--
+    }
+    
+    M1d=M1
+    M2d=M2
+    
+    foreach (K:number,I:vector=WPList) {
+        EGP:egp3DTracker(K,I)
+        EGP:egpText(K+WPList:count(),K:toString(),vec2(0,0))
+        EGP:egpParent(K+WPList:count(),K)
+    }
+}

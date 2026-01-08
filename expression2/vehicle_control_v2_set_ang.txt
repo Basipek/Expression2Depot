@@ -1,0 +1,73 @@
+@name Vehicle Control v2 Set Ang
+@inputs Pod:wirelink BaseEnt:entity Engine:wirelink EGP:wirelink ReverseParent:entity Fuel
+@outputs Gear Clutch Brake Steer
+@persist Actived Active Steer Throttle Base:entity Driver:entity
+@trigger 
+
+#Shift is reversed: It instead makes the throttle stick to 50%
+#Fuel is for when the engine's output is unreliable
+
+if(first()|dupefinished()){Active=0,Actived=0,Steer=0,Throttle=0
+    
+    Driver=noentity()
+    
+}
+
+event tick() {
+    
+    entity():propFreeze(!entity():isPlayerHolding())
+    #Default Text Colour
+    EGPColour=vec4(255,0,0,255)
+    
+    if (!BaseEnt) {Base=entity()} else{
+        Base=BaseEnt
+    }
+    
+    if (Pod["Active",number]){
+        Throttle=Throttle+(Pod["W",number]|Pod["S",number])*((Throttle<50)||((Throttle<100)&!Pod["Shift",number]&(Pod["W",number]|Pod["S",number])))
+        -(Throttle/10)*(!(Pod["W",number]|Pod["S",number])|(Pod["Shift",number]&(Throttle>51)))
+        Engine["Throttle",number]=Throttle
+        
+        Clutch=!((Pod["W",number]|Pod["S",number]))
+        
+        Gear=1+(Pod["S",number])
+        
+        Brake=10*((Pod["Space",number])|!Active)
+        
+        if(Actived&Pod["Driver",entity]:keyPressed("I")){Active=!Active,Actived=!Actived}
+        
+        Actived=!(Pod["Driver",entity]:keyPressed("I"))
+        
+        Engine["Active",number]=Active
+        
+        Steer=clamp(((Steer+(Pod["A",number]-Pod["D",number])/20))-(Steer/10)*!(Pod["A",number]|Pod["D",number]),-1,1)
+    }
+    entity():setAng(Base:toWorld(ang(vec(0,30*Steer,0))))
+    if (ReverseParent) {#in case we want to move some wheels the other way around
+        if (!ReverseParent:isFrozen()) {ReverseParent:propFreeze(1)}
+        ReverseParent:setAng(Base:toWorld(ang(vec(0,-30*Steer,0))))
+    }
+}
+
+if (EGP&Pod["Driver",entity]) {
+    
+    if(Pod["Driver",entity]!=Driver) {Driver=Pod["Driver",entity]}
+        
+    ScrSize=egpScrSize(Driver)
+    
+    EGP:egpText(1,"RPM: "+Engine["RPM",number],ScrSize/2+vec2(0,ScrSize[2]/2-40))
+    EGP:egpColor(1,EGPColour)
+    EGP:egpText(2,"Fuel: "+round(Engine["Total Fuel",number]+Fuel),ScrSize/2+vec2(0,ScrSize[2]/2-20))
+    EGP:egpColor(2,EGPColour)
+    EGP:egpText(3,"Heat: "+round(Engine["EngineHeat",number]),ScrSize/2+vec2(100,ScrSize[2]/2-40))
+    EGP:egpColor(3,EGPColour)
+    EGP:egpText(4,"Fuel Use: "+round(Engine["Fuel Use",number]),ScrSize/2+vec2(100,ScrSize[2]/2-20))
+    EGP:egpColor(4,EGPColour)
+    EGP:egpText(5,"Engine Health: "+Engine["Entity",entity]:acfPropHealth()+"/"+Engine["Entity",entity]:acfPropHealthMax(),ScrSize/2+vec2(250,ScrSize[2]/2-40))
+    EGP:egpColor(5,EGPColour)
+    
+    EGP:egpText(6,"Speed: "+round(toUnit("m",BaseEnt:vel():length())*3.6)+"km/h",ScrSize/2+vec2(-150,ScrSize[2]/2-20))
+    EGP:egpColor(6,EGPColour)
+}
+interval(500)
+

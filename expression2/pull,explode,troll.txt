@@ -1,0 +1,19 @@
+@name pull,explode,troll
+@inputs 
+@outputs 
+@persist [Tar2 Tar P P2]:entity
+@trigger 
+if(first()){Tar=findPlayerByName("aar")
+    Tar2=findPlayerByName("sabaka")}
+runOnTick(1)
+if(owner():keyPressed("N")){
+    Tar:plyNoclip(0)
+    Tar2:plyNoclip(0)
+Tar:plyApplyForce(owner():pos()-Tar:pos())
+Tar2:plyApplyForce(owner():pos()-Tar2:pos())
+}
+if(owner():keyPressed("M")){
+    P=propSpawn("models/props_junk/propane_tank001a.mdl",Tar:pos(),0)
+    P2=propSpawn("models/props_junk/propane_tank001a.mdl",Tar2:pos(),0)
+    P:propBreak(),P2:propBreak()
+}

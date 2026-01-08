@@ -1,0 +1,25 @@
+@name Auto_Respawn (OBRI's present)
+@persist P:entity
+runOnTick(1)
+#note: i did sum additions
+Ply = findPlayerByName("MasterReaperS")
+
+if( !owner():isAlive() ){
+    local Pos = owner():pos()
+    local Ang = owner():eyeAngles()
+    owner():plySpawn()
+    owner():plySetPos( Pos )
+    owner():plySetAng( Ang )
+    #this part is the addition(and P variable)
+    #if(lastDeath()==owner()){P = propSpawn("models/props_phx/amraam.mdl",lastDeathAttacker():pos(),1),P:propBreak()}
+#end of the addition
+}
+#[if( !Ply:isAlive() ){
+    local Pos = Ply:pos()
+    local Ang = Ply:eyeAngles()
+    Ply:plySpawn()
+    Ply:plySetPos( Pos )
+    Ply:plySetAng( Ang )
+}
+
+

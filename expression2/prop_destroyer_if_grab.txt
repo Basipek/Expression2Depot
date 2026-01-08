@@ -1,0 +1,10 @@
+@name prop destroyer if grab
+@inputs 
+@outputs 
+@persist Ent:array
+@trigger 
+runOnTick(1)
+findByModel("models/props_c17/FurnitureChair001a.mdl")
+Ent=findToArray()
+foreach(K,V:entity=Ent){if(V:isPlayerHolding()){V:propBreak()}
+}

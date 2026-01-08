@@ -1,0 +1,28 @@
+@name dmg calculator
+@inputs Ent:entity
+@outputs Dmg:number Modeout:string
+@persist Mode
+@trigger 
+runOnChat(1)
+runOnDmg(1,Ent)
+if(first()){Mode=1}
+    switch(Mode){
+        case 1,
+        Modeout="mode: multiply"        
+        break
+        case 2,
+        Modeout="mode: per bullet"
+        break
+    }
+
+if(dmgClk()&Mode==1){Dmg=dmgDamage()+Dmg}
+
+if(dmgClk()&Mode==2){Dmg=dmgDamage()}
+
+if(chatClk(owner())&owner():lastSaid():lower():explode(" ")[1,string]=="/resetdamage"){
+    Dmg=0
+    hideChat(1)}
+if(chatClk(owner())&owner():lastSaid():lower():explode(" ")[1,string]=="/mode"&owner():lastSaid():lower():explode(" ")[2,string]!=""){
+    Mode= owner():lastSaid():lower():explode(" ")[2,string]:toNumber()
+    hideChat(1)}
+

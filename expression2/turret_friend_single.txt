@@ -1,0 +1,14 @@
+@name 
+@inputs  W:wirelink Turret:entity
+@outputs 
+@persist 
+@trigger 
+
+runOnKeys(owner(),1)
+runOnTick(1)
+if(!owner():keyPressed("O")){
+Turret:applyForce((((owner():shootPos()+vec(0,0,30))-Turret:pos())*25-Turret:vel())*Turret:mass())
+Turret:applyAngForce((Turret:toLocal((owner():aimPos()-Turret:pos()):toAngle()) *
+ 150 - Turret:angVel() * 10) * shiftL(ang(Turret:inertia())))
+if(owner():keyPressed("B")){W["Fire",number]=1}else{W["Fire",number]=0}
+}

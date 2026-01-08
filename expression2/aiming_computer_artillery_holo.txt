@@ -1,0 +1,41 @@
+@name Aiming Computer Artillery Holo
+@inputs Tar:vector TarVel:vector Gun:entity MuzVelo Fire
+@outputs V H Fire Poop El Angles:angle Angle Distance DistR
+@persist El Be TarP:vector Dist DistR Angle R Re A GunW:wirelink MuzVel Delta Distance
+@trigger 
+
+
+if(holoCanCreate()&first()|!A){A=0,if(first()){Gun:deparent()},GunW=Gun:wirelink(),holoCreate(1,entity():pos(),vec(1)),holoAlpha(1,100),holoAng(1,ang(vec(0))),Gun:setPos(entity():pos()),Gun:setAng(ang(vec(0))),timer("A",1000)}
+MuzVel=MuzVelo
+runOnTick(1)
+if(clk("A")&!A){Angle=45,Gun:parentTo(holoEntity(1))}
+if(clk("A")|A){A=1
+
+TarP=(Tar)
+
+Distance=(fromUnit("m/s",MuzVel))*cos(Angle)*((fromUnit("m/s",MuzVel))*sin(Angle)/gravity())*2
+DistR=abs(TarP:x()-Gun:pos():x())+abs(TarP:y()-Gun:pos():y())
+if(Distance>DistR)
+{
+    Delta=clamp((Distance-DistR)/1000,-1,1)
+}
+else
+{
+    Delta=clamp((DistR-Distance)/1000,-1,1)
+}
+
+if(45<Angle<90){
+    Angle=Angle-clamp(DistR-Distance,-Delta,Delta)
+    
+    
+    
+}else{Angle=Angle+clamp(45-Angle,-1,1)}
+El=-Angle
+Be=(TarP-holoEntity(1):pos()):toAngle():yaw()
+
+
+
+holoAng(1,ang(vec(El,Be,0)))
+
+Fire=(abs(El)+abs(Be))<0.5
+}

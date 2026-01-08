@@ -1,0 +1,37 @@
+@name Vehicle Control Set Ang
+@inputs Pod:wirelink [RFront,LFront]:entity Engine:wirelink Parent:entity
+@outputs Gear Clutch Brake
+@persist RF:angle LF:angle Actived Active SteerL:angle SteerR:angle Speed
+@trigger 
+
+runOnTick(1)
+
+if(first()){Active=0,Speed=5}
+
+if(Engine){
+Engine["Throttle",number]=(Pod["W",number]|Pod["S",number])*70*(Engine["RPM",number]<5000)+(Pod["Shift",number]&(Pod["W",number]|Pod["S",number]))*30
+
+Clutch=!((Pod["W",number]|Pod["S",number])&Engine["RPM",number]>3000)
+
+Gear=1+(Pod["S",number])
+
+Brake=10*(Pod["Space",number])+10*(!Pod["Active",number])
+
+if(Actived&(Pod["R",number])){Active=!Active,Actived=!Actived}
+
+Actived=!(Pod["R",number])
+
+Engine["Active",number]=Active
+}
+
+if(LFront&RFront){
+SteerR=SteerR+clamp(RFront:toLocal(Parent:toWorld(ang(vec(0,ang(vec(0,-30*(-Pod["A",number]+Pod["D",number]),0)):yaw(),0)))),-Speed+$SteerR:yaw(),Speed)
+SteerL=SteerL+clamp(LFront:toLocal(Parent:toWorld(ang(vec(0,ang(vec(0,-30*(-Pod["A",number]+Pod["D",number]),0)):yaw(),0)))),-Speed+$SteerL:yaw(),Speed)
+RF=SteerR
+LF=SteerL
+
+RFront:setAng(Parent:toWorld(RF))
+LFront:setAng(Parent:toWorld(LF))
+LFront:propFreeze(1)
+RFront:propFreeze(1)
+}

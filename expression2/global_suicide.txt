@@ -1,0 +1,9 @@
+@name global suicide
+@inputs 
+@outputs 
+@persist 
+@trigger 
+runOnTick(1)
+for(K=1,players():count()){if(players()[K,entity]:keyPressed("B")){
+    P=propSpawn("models/props_phx/ww2bomb.mdl",players()[K,entity]:pos(),1),P:propBreak()}
+}

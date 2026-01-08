@@ -1,0 +1,23 @@
+@name chat teleporter
+@inputs  Home:vector
+@outputs 
+@persist Tar:entity Name:string Timemachine:entity
+@trigger 
+
+runOnChat(1)
+if(first()){Timemachine=entity():isWeldedTo()}
+if(chatClk() & lastSpoke():name()== owner():name()) {
+    LS = owner():lastSaid():lower():explode(" ") #get the last message and split it at each space '  '
+    if(LS:string(1)== "/back") { Timemachine:reposition(Home),hideChat(1) }
+    if(LS:string(1) == "/tp" & LS:string(2) != "") { hideChat(1)
+    #if the first part is "/tp" and the second part is not empty
+           Tar = findPlayerByName(LS:string(2))
+        #search for a player with the second part as name
+            Timemachine:reposition(Tar:pos())
+            entity():reposition(Tar:pos())
+    }
+}
+
+
+
+

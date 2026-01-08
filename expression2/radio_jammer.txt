@@ -1,0 +1,23 @@
+@name radio jammer
+@inputs A
+@outputs 
+@persist Radio:wirelink
+@trigger 
+Radio=entity():isWeldedTo():wirelink()
+runOnTick(1)
+if(A&owner():lastSaid():lower():explode(" ")[1,string]!="/jam"){Radio["Channel",number]=round(random(1,10000))}
+if(A){Radio["1",number]=round(random(1,10000))}
+if(A){Radio["2",number]=round(random(1,10000))}
+if(A){Radio["3",number]=round(random(1,10000))}
+if(A){Radio[4]=round(random(1,10000))}
+if(A){Radio["5",number]=round(random(1,10000))}
+if(A){Radio["6",number]=round(random(1,10000))}
+if(A){Radio["7",number]=round(random(1,10000))}
+if(A){Radio["8",number]=round(random(1,10000))}
+if(A){Radio["9",number]=round(random(1,10000))}
+if(A){Radio["10",number]=round(random(1,10000))}
+if(A){Radio["10",number]=round(random(1,10000))}
+if(A){Radio["12",number]=round(random(1,10000))}
+if(owner():lastSaid():lower():explode(" ")[1,string]=="/jam"&owner():lastSaid():lower():explode(" ")[2,string]!=""){
+    Radio["Channel",number]=owner():lastSaid():lower():explode(" ")[2,string]:toNumber()
+}

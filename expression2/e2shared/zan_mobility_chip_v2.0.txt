@@ -1,0 +1,410 @@
+@name Zan Mobility Chip v2.0
+
+@inputs [Active, W, A, S, D, Half_Throttle, Brake_Bind]:number
+@inputs [Base]:entity [LTransfer, RTransfer]:wirelink
+
+@outputs [Gear, Gear_2, Clutch, Throttle]:number
+@outputs [Brake, CVT_Ratio]:number
+
+@inputs [Wheels]:array
+@persist [Wheels, Engines, Filter]:array
+
+@persist [Throttle, Idle_Throttle]:number
+@persist [Reverse_Gear, Default_Gear]:number
+@persist [Use_Transfers_As_Reverse]:number
+
+@persist [Is_Locked]:number
+
+@persist [Minimum_CVT_Ratio, Maximum_CVT_Ratio, CVT_Ratio_RPM_Multiplier, CVT_Ratio_Speed_Multiplier, FullClutchRPM, NoClutchRPM]:number
+
+@persist [Average_RPM, Desired_speed, Powerband_min, Powerband_max]:number
+@persist [Speed, Speed2, Speed3, Speed4, Speed5, Speed6, Speed7]:number
+@outputs [Speed_UnConverted, Speed]:number
+@persist [Default_Desired_Speed]:number
+
+@persist [CVT_Averages]:array
+
+@persist [Brake_Speed_Threshold, Use_Freeze_Brakes, Brake_Force, SteeringBrakes, Brake_Status]:number
+
+    ##---## Author: Zan ##---##
+
+    # Made by loud obnoxious trans furry!!1!1111
+    # Colon three
+    # Evil ABS mobility chip11!1!!
+    # CTMC is stinky~
+    # ACE > ACF2 > ACF3 (Fight me)
+    
+    # (In all seriousness though, DM me if you need any help.)
+
+if(first() || dupefinished()) 
+{ 
+        
+    # Note: Made for use of a CVT gearbox and transfer cases for tanks. But can be used on cars too.
+    # Note: This chip isn't made for speed but reliability. 
+    # Note: Wire inputs are self explanatory. This chip expects you to know atleast some barebones ACF general mobility knowledge to set up and tune.
+    # Note: If the "chip dont work" then you are doing something wrong.
+        
+    Base:propSetBuoyancy(0), # Do not worry about this.
+    Base:propDrag(0), # Do not worry about this.
+    Base:propInertia(vec(1100, 1800, 400)), # Modifying the inertia allows you to rotate faster or slower on certain axises.
+    
+    Default_Gear = 1, # Default gear when going forwards for the CVT.
+    Reverse_Gear = 1, # Reverse Gear for the CVT.
+    
+    Use_Transfers_As_Reverse = 1, # Name is self explanatory. 1 Uses transfer cases for the reverse gear (Allows you to use CVT Ratio calculations more efficiently). 0 Means the CVT will be used for reverse gears.
+    
+    Use_Freeze_Brakes = 1, # If equal to one then any speed below the brake speed threshold will use freezer brakes. If set to 0 then it will not use freeze brakes.
+    Brake_Speed_Threshold = 12,
+    # In MPH, any speed under this value means the vehicle will use freeze brakes, 
+    # meanwhile any speed over the vehicle will use ACF brakes.
+    
+    SteeringBrakes = 0.5, 
+    # Brakes used for transfer case steering. Keep between 0 - 1.
+    
+    Brake_Force = 0.6, 
+    # Brakes used for regular gearbox braking. Keep between 0 - 1.
+    
+    Idle_Throttle = 30, # The throttle engines default to when not driving.
+    
+    # If you use multiple engines with varying RPM powerbands then I can not help you.
+    # VVV (If you have multiple do not add them, just do it as if it was an individual engine) VVV
+    Powerband_min = 6530,  # Minimum RPM of the engine's powerband 
+    Powerband_max = 9500,  # Maximum RPM of the engine's powerband
+    
+    Minimum_CVT_Ratio = 0.1, # Name is self explanatory.
+    Maximum_CVT_Ratio = 0.8, # Name is self explanatory.
+    
+    CVT_Ratio_RPM_Multiplier = 0.55, # CVT Ratio calculation offset by RPM.
+    CVT_Ratio_Speed_Multiplier = 0.55,  # CVT Ratio calculation offset by speed. 
+    # Lower values mean the CVT Ratio increase and decrease is more Gradual.
+    
+    FullClutchRPM = (Powerband_min / 2), # The RPM of which clutch will be in full effect.
+    NoClutchRPM = Powerband_min, # The RPM of which clutch will not be used.
+    # Clutches help for when your engine is struggling or is not using any torque when it should.
+
+    # VVV The below is for an 8-speed gearbox VVV
+
+    # Note: "Gear_2" Is for the 8-speed and "Gear" is for the CVT.
+    # Note: The desired speed is dynamic to your current speed and is also used in the CVT_Ratio calculations.
+    # Note: Therefore regardless if you are using both an 8-speed and a CVT gearbox, you may still have to tweak each Speed 2 - 8 value below.
+    
+    Desired_speed = 60,  # Desired top vehicle speed in mph
+    
+    Speed2 = 10, 
+    Speed3 = 15, 
+    Speed4 = 20, 
+    Speed5 = 25, 
+    Speed6 = 30, 
+    Speed7 = 35, 
+        
+    # ^^^ The above is for an 8-speed gearbox ^^^
+    
+    # Ignore. (Do not touch) V V V
+    CVT_Averages = array(),
+    Engines = array(),
+        
+    Is_Locked = 0,
+    
+    Filter = Base:getConnectedEntities(),
+    
+    Default_Desired_Speed = Desired_speed
+    
+    Brake_Status = 0
+    # Ignore. (Do not touch) ^ ^ ^
+    
+    interval(100)
+
+} elseif(Filter:count() & !Is_Locked) {
+
+    if(!Is_Locked) 
+    {
+        foreach(TempVar_3:number, TempVar_4:entity=Filter) 
+        { 
+            if(TempVar_4:type() == "acf_engine") { Engines:pushEntity(TempVar_4) } 
+            if(TempVar_3 >= Filter:count()) { Is_Locked = 1, print("Engines complete"), break }
+        } 
+    }
+
+}
+
+elseif(Active & clk()) 
+{
+    
+    if(Is_Locked) 
+    { 
+    
+        if(Engines:count()) 
+        { # if(Engines[1, entity]:isValid()) 
+            # { Average_RPM = Engines[1, entity]:acfRPM() }
+            # else { print("First Index Engine Lost"), Engines:shift() }
+            
+            Average_RPM = 0
+            
+            for(I=0, Engines:count()+1, 1) 
+            { 
+                if(Engines:exists(I)) 
+                { if(!Engines[I, entity]:isValid()) { print("LOST ENGINE: " + toString(I)) Engines:remove(I) }
+                    
+                    Average_RPM = Average_RPM + Engines[I, entity]:acfRPM()
+                        
+                }
+                
+                if(I >= Engines:count()) { break }
+            }
+            
+            Average_RPM = ((Average_RPM) / (Engines:count()))
+        
+        } else { Average_RPM = 0 }
+    
+    }
+    
+    # Speed = abs(toUnit("km/h", Base:vel():length()))
+    
+    # Speed = abs(toUnit("mph", Base:vel():length()))
+    
+    Speed = abs(Base:vel():length() / 17.6)
+    
+    # Speed_UnConverted = fromUnit("mph", Speed)
+    
+    function number array:pushGetAvg(Number:number, Samples:number) {
+        if(This:count() > Samples) {
+            This:shift()
+        }
+        
+        This:pushNumber(Number)
+        
+        return This:average()
+    }
+    
+    function number calculate_cvt_ratio(Current_speed:number, Ideal_Speed:number, Engine_rpm:number, Powerband_min:number, Powerband_max:number) 
+    {
+        
+        if(Engine_rpm < Powerband_min) 
+        {
+            # If engine RPM is below the powerband, set CVT ratio to a minimum value
+            return Minimum_CVT_Ratio 
+        } elseif(Engine_rpm > Powerband_max) 
+        {
+            # If engine RPM is above the powerband, set CVT ratio to a maximum value
+            return Maximum_CVT_Ratio
+        } else {
+            # Interpolate CVT ratio within the powerband
+            local Powerband_range = (Powerband_max - Powerband_min)
+            local Rpm_within_powerband = (Engine_rpm - Powerband_min)
+                        
+            local Ratio_rpm = ((CVT_Ratio_RPM_Multiplier) * (Rpm_within_powerband / Powerband_range))
+            
+            # Adjust ratio based on vehicle speed
+            local Ratio_speed = ((CVT_Ratio_Speed_Multiplier) * (Current_speed / Ideal_Speed))
+            
+            # Combine ratios based on a weighted average or any other method
+            # Here, I'll simply take the maximum of the two ratios
+            local Final_ratio = max(Ratio_rpm, Ratio_speed)
+        
+            return Final_ratio
+        }
+        
+    }
+    
+    local RPM = clamp(Average_RPM, FullClutchRPM, NoClutchRPM)
+    local Normalized = ((RPM - FullClutchRPM) / (NoClutchRPM - FullClutchRPM))
+    Clutch = (1 - Normalized)
+    
+    # Thanks to [MG] Cheezus for the clutch formula.
+    
+    if(Wheels:count()) 
+    {
+        
+        if(Brake_Status)
+        {
+            if((Speed <= Brake_Speed_Threshold) & Use_Freeze_Brakes) 
+            {
+                foreach(_:number, TempVar_2:entity=Wheels) 
+                { if(TempVar_2:isValid()) { TempVar_2:propFreeze(1) } }
+            }
+            else 
+            { Brake = Brake_Force
+                LTransfer["Left Brake",number]=Brake_Force,
+                LTransfer["Right Brake",number]=Brake_Force,
+                RTransfer["Left Brake",number]=Brake_Force,
+                RTransfer["Right Brake",number]=Brake_Force 
+            }
+        } 
+        
+        if(!Brake_Status)
+        {
+            if((Speed <= Brake_Speed_Threshold) & Use_Freeze_Brakes) 
+            {
+                foreach(_:number, TempVar_2:entity=Wheels) 
+                { if(TempVar_2:isValid()) { TempVar_2:propFreeze(0) } }
+            } else 
+            { Brake = 0
+                LTransfer["Left Brake",number]=0,
+                LTransfer["Right Brake",number]=0,
+                RTransfer["Left Brake",number]=0,
+                RTransfer["Right Brake",number]=0
+            }
+        }
+        
+    } elseif(!Wheels:count())  
+    {
+        if(Brake_Status)
+        {
+                Brake = Brake_Force
+                LTransfer["Left Brake",number]=Brake_Force,
+                LTransfer["Right Brake",number]=Brake_Force,
+                RTransfer["Left Brake",number]=Brake_Force,
+                RTransfer["Right Brake",number]=Brake_Force 
+        } 
+        
+        if(!Brake_Status)
+        {
+            Brake = 0
+            LTransfer["Left Brake",number]=0,
+            LTransfer["Right Brake",number]=0,
+            RTransfer["Left Brake",number]=0,
+            RTransfer["Right Brake",number]=0
+        }
+    } else { print("What the fuck are you doing!?") }
+    
+    if(W|A|S|D) 
+    { 
+        if(Half_Throttle) { Throttle = 50 } 
+        else { Throttle = 100 } 
+    
+    } else { Throttle = Idle_Throttle }
+    
+    if(D&!W&!S) 
+    { 
+        LTransfer["Gear",number]=2, 
+        RTransfer["Gear",number]=1, 
+        Gear=1 
+    
+        if(!Brake_Status) 
+        {
+            LTransfer["Left Brake",number]=0,
+            LTransfer["Right Brake",number]=0,
+        
+            RTransfer["Right Brake",number]=0,
+            RTransfer["Left Brake",number]=0
+        }
+        
+    } # else { LTransfer["Gear",number]=1 }
+    
+    elseif(A&!W&!S) 
+    { 
+        LTransfer["Gear",number]=1, 
+        RTransfer["Gear",number]=2, 
+        Gear=1 
+        
+        if(!Brake_Status) 
+        {
+            LTransfer["Left Brake",number]=0,
+            LTransfer["Right Brake",number]=0,
+        
+            RTransfer["Right Brake",number]=0,
+            RTransfer["Left Brake",number]=0
+        }
+        
+    } # else { RTransfer["Gear",number]=1 }
+    
+    elseif((D&W)|(A&S)) 
+    { 
+        LTransfer["Left Clutch",number]=1,
+        LTransfer["Right Clutch",number]=1,
+        LTransfer["Left Brake",number]=SteeringBrakes,
+        LTransfer["Right Brake",number]=SteeringBrakes,
+        RTransfer["Right Clutch",number]=0,
+        RTransfer["Left Clutch",number]=0,
+        RTransfer["Right Brake",number]=0,
+        RTransfer["Left Brake",number]=0 
+    }
+    
+    elseif((A&W)|(D&S)) 
+    { 
+        RTransfer["Right Clutch",number]=1,
+        RTransfer["Left Clutch",number]=1,
+        RTransfer["Left Brake",number]=SteeringBrakes,
+        RTransfer["Right Brake",number]=SteeringBrakes,
+        LTransfer["Left Clutch",number]=0,
+        LTransfer["Right Clutch",number]=0,
+        LTransfer["Left Brake",number]=0,
+        LTransfer["Right Brake",number]=0
+    }
+    
+    elseif(!A&!D) 
+    { 
+        LTransfer["Left Clutch",number]=0,
+        LTransfer["Right Clutch",number]=0,
+    
+        RTransfer["Right Clutch",number]=0,
+        RTransfer["Left Clutch",number]=0,
+        
+        LTransfer["Gear",number]=1,
+        RTransfer["Gear",number]=1
+        
+        if(!Brake_Status) 
+        {
+            LTransfer["Left Brake",number]=0,
+            LTransfer["Right Brake",number]=0,
+        
+            RTransfer["Right Brake",number]=0,
+            RTransfer["Left Brake",number]=0
+        }
+    }
+    
+        
+    Speed = abs(Base:vel():length() / 17.6)
+    
+    if((W&!A) | (W&!D) | (S&!A) | (S&!D)) 
+    {
+        if(Speed<Speed2) { Gear_2 = 1, Desired_speed = Speed2 }
+        if(Speed2<Speed) { Gear_2 = 2, Desired_speed = Speed3 }
+        if(Speed3<Speed) { Gear_2 = 3, Desired_speed = Speed4 }
+        if(Speed4<Speed) { Gear_2 = 4, Desired_speed = Speed5 }
+        if(Speed5<Speed) { Gear_2 = 5, Desired_speed = Speed6 }
+        if(Speed6<Speed) { Gear_2 = 6, Desired_speed = Speed7 }
+        if(Speed7<Speed) { Gear_2 = 7, Desired_speed = Default_Desired_Speed }
+    } else 
+    { if(Speed >= Brake_Speed_Threshold) 
+      {
+        Gear_2 = 1 
+      } else { Gear_2 = 8 }
+      Desired_speed = Default_Desired_Speed
+    }
+    
+    if(W | (A&!S) | (D&!S)) 
+    { Gear = Default_Gear } 
+    
+    elseif(S|(A&S)|(D&S)) 
+    { 
+        if(Use_Transfers_As_Reverse) 
+        {
+            RTransfer["Gear",number]=2, 
+            LTransfer["Gear",number]=2, 
+            Gear = Default_Gear
+        } elseif(!Use_Transfers_As_Reverse) 
+        {
+            RTransfer["Gear",number]=1, 
+            LTransfer["Gear",number]=1,
+            Gear = Reverse_Gear
+        }
+    } 
+    
+    elseif(!D&!A&!W&!S) 
+    { Gear = 0 }
+    
+    local Cur_CVT_Ratio = calculate_cvt_ratio(Speed, Desired_speed, Average_RPM, Powerband_min, Powerband_max)
+    CVT_Ratio = CVT_Averages:pushGetAvg(Cur_CVT_Ratio, 10)
+    
+    Base:propSetAngVelocity(clamp(Base:angVelVector(), 0, 75))
+    
+    interval(100)
+} else { interval(50) }
+
+if(Active & !clk()) 
+{ 
+    if(Brake_Bind && ~Brake_Bind) { Brake_Status = !Brake_Status } 
+}
+
+if(dupefinished()) { reset() }

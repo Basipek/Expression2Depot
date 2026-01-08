@@ -1,0 +1,50 @@
+@name Weapon Shop
+@inputs Hud:wirelink User:entity
+@outputs Left Right Mleft Mright
+@persist Leftav Rightav Mleftav Mrightav
+@trigger 
+
+function number button(Index:number) {
+    local Cursor = Hud:egpCursor(User)
+    local Amin = Hud:egpPos(Index) - Hud:egpSize(Index)/2
+    local Amax = Hud:egpPos(Index) + Hud:egpSize(Index)/2
+    return inrange(Cursor, Amin, Amax)& User:keyUse()
+}
+
+if(first()){Hud:egpClear()
+    Leftav=Rightav=Mrightav=Mleftav=1
+    Hud:egpBox(1,vec2(100,400),vec2(100,50))
+    Hud:egpColor(1,vec(100,255,0))
+    Hud:egpText(2,"Buy",vec2(80,390))
+    
+    Hud:egpBox(3,vec2(400,400),vec2(100,50))
+    Hud:egpColor(3,vec(100,255,0))
+    Hud:egpText(4,"Buy",vec2(380,390))
+    
+    Hud:egpBox(5,vec2(100,300),vec2(100,50))
+    Hud:egpColor(5,vec(100,255,0))
+    Hud:egpText(6,"Buy",vec2(80,290))
+    
+    Hud:egpBox(7,vec2(400,300),vec2(100,50))
+    Hud:egpColor(7,vec(100,255,0))
+    Hud:egpText(8,"Buy",vec2(380,290))
+}
+#left
+if(button(1)&Leftav==1){moneyRequest(User,5000,"Weaponl")}
+if(moneyClkTitle()=="Weaponl"){Leftav=0,Left=1,Hud:egpSetText(2,"Wait"),timer("left",1000)}
+if(clk("left")){Hud:egpSetText(2,"Buy"),Left=0,Leftav=1}
+
+#right
+if(button(3)&Rightav==1){moneyRequest(User,20000,"Weaponr")}
+if(moneyClkTitle()=="Weaponr"){Rightav=0,Right=1,Hud:egpSetText(4,"Wait"),timer("right",1000)}
+if(clk("right")){Hud:egpSetText(4,"Buy"),Right=0,Rightav=1}
+
+#Middle left
+if(button(5)&Mleftav==1){moneyRequest(User,70000,"Weaponml")}
+if(moneyClkTitle()=="Weaponml"){Mleftav=0,Mleft=1,Hud:egpSetText(2,"Wait"),timer("mleft",1000)}
+if(clk("mleft")){Hud:egpSetText(2,"Buy"),Mleft=0,Mleftav=1}
+
+#Middle right
+if(button(7)&Mrightav==1){moneyRequest(User,70000,"Weaponmr")}
+if(moneyClkTitle()=="Weaponmr"){Mrightav=0,Mright=1,Hud:egpSetText(4,"Wait"),timer("mright",1000)}
+if(clk("mright")){Hud:egpSetText(4,"Buy"),Mright=0,Mrightav=1}

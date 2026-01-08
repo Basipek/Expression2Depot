@@ -1,0 +1,11 @@
+@name find to win event
+@inputs [Ranger2 Ranger]:wirelink Ent:entity 
+@outputs Emitter
+@persist Name:string A
+@trigger 
+runOnTick(1)
+#ranger2 is for player identity
+Name=Ranger2["Entity",entity]:name()
+if(Ranger["Entity",entity]==Ent&Ranger2["Entity",entity]:isPlayer()){A++}
+if(A==1){if(Ranger2["Entity",entity]:isValid()&Ranger2["Entity",entity]:isPlayer()){chatPrint(vec(0,255,100),"Congrats! ",vec(255),""+Name,vec(255),"'s found the objective!"),hint("done",5),Emitter=1}else{Emitter=0}
+}

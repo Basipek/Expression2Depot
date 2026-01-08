@@ -1,0 +1,714 @@
+@name Aiming Computer V3 EGP Chip
+@inputs [EGP Pod Cam Engine Radar IRST]:wirelink Control_Chips_Array:array #Addon_Chips:array
+@outputs LockedPos:vector TarAngOut:angle
+
+#Data and Deltas
+@persist Actived Active Changed WeaponIndex ActionMenuIndex ActionMenuChanged [Control Weapon]:wirelink 
+@persist [WeaponEnt Gunner]:entity HitPos:vector CamAng:angle ScrSize:vector2
+@persist LockedPos:vector TarIndex TarChanged ActionMenuActivate ActionMenuItems:array
+@persist FOV ZeroOffset Rangetable:table
+
+#Customizables
+@persist Indexes:array [AmmoColour EngineColour]:vector4
+
+#EGP System
+@persist EGPSize EGPSizes:table
+@persist EGPLockedPosBox EGPLockedPosBoxTracker [EGPIRSTIDs EGPRadarIDs]:array
+@persist EGPLeadPosBox EGPLeadPosBoxTracker EGPRadarLeadPosBox EGPRadarLeadPosBoxTracker
+
+#Action Menu
+@persist GPSLock IDF RadarLock RadarToGPS RadarOn IRSTOn 
+
+@trigger 
+@strict
+
+#INSTRUCTIONS#
+#[
+Use an Adv Entity Marker to get all the chips
+Wire EGP and Pod
+ready to use
+
+If you wire the engine, you don't need a second EGP for the engine chip; just use this one.
+
+Use a Cam Controller with localized movement and parent it to the gun if you wanna use it
+
+Engine is only for showing data
+
+Radara and IRST are for viewing and choosting targets.
+Cyan wedges for Radar, Orange wedge for IRST.
+Dark Blue wedge for Radar selection
+
+Change params right down here or further down
+Logic and code can also be easily customized around below.
+
+Action Menu is a framework that exists.
+
+Rangetable is from the Ranging Table Generator chip. You can use it for a better zeroing sight.
+I, Basipek, have an edited version #08.04.2024
+of it just to give me an output instead.
+It'll use the current gun's automatically.
+
+PROBABLY THE KEYBINDS
+(YOU CAN CHANGE THEM ANYTIME IN THE CUSTOMIZABLE PART)
+M2 to lock/unlock aim
+M1 to fire
+R to reload, U to unload.
+1-9 Number keys to choose weapon chip
+
+Shift to zoom
+Alt for FLIR
+
+B to lock hitpos as GPS vector
+
+ScrollWheel to change Action Menu Action
+Grave (") to activate Action Menu Action
+
+H to switch Radar targets
+
+]#
+
+
+if (first()) {
+    Active=Actived=Changed=ActionMenuChanged=TarChanged=0
+    Weapon=Control=nowirelink()
+    Gunner=noentity()
+    EGPSize=ActionMenuIndex=EGPLockedPosBox=EGPLockedPosBoxTracker=EGPLeadPosBox=EGPLeadPosBoxTracker
+        =EGPRadarLeadPosBox=EGPRadarLeadPosBoxTracker=1
+    HitPos=LockedPos=vec(0)
+    EGPSizes=table()
+    EGPRadarIDs=array()
+    EGPIRSTIDs=array()
+    ScrSize=vec2(0)
+    CamAng=ang(vec(0,0,0))
+    FOV=ActionMenuActivate=0
+    GPSLock=IDF=RadarLock=RadarToGPS=RadarOn=IRSTOn=0
+    ActionMenuItems=array("")
+    
+    TarIndex=1
+    ZeroOffset=0
+    
+    #Params and Customizations
+    #Which of the Control Chip shall we choose for the current selection? For when the Entity Marker is ordered wrong.
+    Indexes=array(1,2,3,4,5)
+    if (!Control_Chips_Array:count()){exit()}
+    AmmoColour=vec4(0,0,0,255)
+    EngineColour=vec4(255,0,0,255)
+}
+    #FUNCTIONS#
+    #Change Selected Control Chip
+    function changeControl(SelIndex:number) {
+        Index=Indexes[SelIndex,number]
+        if (!Control_Chips_Array[Index,entity]){return}
+        WeaponIndex=SelIndex
+        if(Weapon){Weapon["Fire",number]=Control["Active",number]=0}#Reset stuff when changing away
+        Control["Selected",number]=0
+        Control=Control_Chips_Array[Index,entity]:wirelink()
+        Control["Selected",number]=1
+        Weapon=Control["Weapon",wirelink]
+        WeaponEnt=Control["WeaponEnt",entity]
+        if (!WeaponEnt:isValid()) {WeaponEnt = Weapon["Create Entity",entity]}
+        Rangetable=Control["Rangetable",table]
+        #AmmoBox=Control["AmmoBox",wirelink]
+    }
+    
+    #Use "Ranging Table Generator EDITED"
+    function number getAngForDist(Dist:number,Table:table,IDF:number) { #08.04.2024
+        if (Dist) {#Dist in meters
+            local AngOut=0
+            foreach (K:number,I:vector = Table) {
+                if (((I:x()>Dist&IDF&I:y()>45)|(I:x()<Dist&!IDF&I:y()<45))) {
+                    local IndOff=0
+                    if (IDF) {IndOff=1}else{IndOff=-1}
+                    AngOut=I:y()+(I:y()-Table[K+IndOff,vector]:y())/(I:x()-Table[K+IndOff,vector]:x())*(Dist-I:x())
+                    return AngOut
+                }else{
+                    continue
+                }
+            }
+        }
+        return 0
+    }
+    function number getDistForAng(Dist:number,Table:table) { #08.04.2024
+        if (Dist) {#Dist in meters
+            local IDF=Dist>45
+            local AngOut=0
+            foreach (K:number,I:vector = Table) {
+                if (((I:y()>Dist&IDF&I:y()>45)|(I:y()<Dist&!IDF&I:y()<45))) {
+                    local IndOff=0
+                    if (IDF) {IndOff=1}else{IndOff=-1}
+                    AngOut=I:x()+(I:x()-Table[K+IndOff,vector]:x())/(I:y()-Table[K+IndOff,vector]:y())*(Dist-I:y())
+                    return AngOut
+                }else{
+                    continue
+                }
+            }
+        }
+        return 0
+    }
+    function number getETAForAng(Dist:number,Table:table) { #08.04.2024
+        if (Dist) {#Dist in meters
+            local IDF=Dist>45
+            local AngOut=0
+            foreach (K:number,I:vector = Table) {
+                if (((I:y()>Dist&IDF&I:y()>45)|(I:y()<Dist&!IDF&I:y()<45))) {
+                    local IndOff=0
+                    if (IDF) {IndOff=1}else{IndOff=-1}
+                    AngOut=I:z()+(I:z()-Table[K+IndOff,vector]:z())/(I:y()-Table[K+IndOff,vector]:y())*(Dist-I:y())
+                    return AngOut
+                }else{
+                    continue
+                }
+            }
+        }
+        return 0
+    }
+    function number getETAForDist(Dist:number,Table:table) { #08.04.2024
+        if (Dist) {#Dist in meters
+            local AngOut=0
+            foreach (K:number,I:vector = Table) {
+                if (((I:x()>Dist&IDF&I:y()>45)|(I:x()<Dist&!IDF&I:y()<45))) {
+                    local IndOff=0
+                    if (IDF) {IndOff=1}else{IndOff=-1}
+                    AngOut=I:z()+(I:z()-Table[K+IndOff,vector]:z())/(I:x()-Table[K+IndOff,vector]:x())*(Dist-I:y())
+                    return AngOut
+                }else{
+                    continue
+                }
+            }
+        }
+        return 0
+    }
+    
+    #EGP System
+    function number createPanel(Pos:vector2,Size:vector2,Colour:vector4) {
+        local CurID=EGPSize
+        EGP:egpRoundedBox(CurID,Pos,Size)
+        EGP:egpColor(CurID,Colour)
+        EGPSizes[CurID,number]=0
+        EGPSize++
+        return CurID
+    }
+    
+    function number createText(Text:string, Offset:vector2, Colour:vector4, Parent:number, Autofit:number) {
+        local CurID=EGPSize
+        local Pos=Offset
+        if (Parent) {
+            #Autofit will make it move slightly downwards with each child added!
+            Pos=EGP:egpPos(Parent)+Offset-EGP:egpSize(Parent)/2*Autofit+EGPSizes[Parent,number]*vec2(0,12)*Autofit
+            EGPSizes[Parent,number]=EGPSizes[Parent,number]+1
+        }
+        EGP:egpText(CurID,Text,Pos)
+        EGP:egpColor(CurID,Colour)
+        EGPSize++
+        return CurID
+    }
+    
+    function number getEGPID() {
+        local CurID=EGPSize
+        EGPSize++
+        #print(EGPSize)
+        return CurID
+    }
+    
+    function function tarDraw() { return function() {
+            #Radar#
+            if(Radar&Gunner){
+                foreach (K:number,V:number = EGPRadarIDs) {
+                    if (!Radar["Position",array][K,vector]){
+                        EGP:egpRemove(V)
+                        EGPRadarIDs:removeNumber(K)
+                    }
+                }
+                if (Radar["Detected",number]&RadarOn){
+                    foreach (K:number,V:vector = Radar["Position",array]) {
+                        EGPRadarTar=getEGPID()
+                        EGPRadarTarTracker=getEGPID()
+                        EGPRadarIDs:pushNumber(EGPRadarTar)
+                        EGPRadarIDs:pushNumber(EGPRadarTarTracker)
+                        EGP:egpCircle(EGPRadarTar,vec2(),vec2(10))
+                        EGP:egpColor(EGPRadarTar,vec4(0,150,150,170)+vec4(0,-100,255,0)*(TarIndex==K))
+                        
+                        EGP:egp3DTracker(EGPRadarTarTracker,V)
+                        EGP:egpParent(EGPRadarTar,EGPRadarTarTracker)
+                    }
+                }
+            }
+            #IRST#
+            if(IRST&Gunner){
+                foreach (K:number,V:number = EGPIRSTIDs) {
+                    if (!IRST["Angle",array][K,angle]){
+                        EGP:egpRemove(V)
+                        EGPIRSTIDs:removeNumber(K)
+                    }
+                }
+                if (IRST["Detected",number]&IRSTOn){
+                    foreach (_:number,V:angle = IRST["Angle",array]) {
+                        EGPIRSTTar=getEGPID()
+                        EGPIRSTIDs:pushNumber(EGPIRSTTar)
+                        V=IRST:entity():toWorld(V)
+                        local V2Pos=ScrSize/2-vec2(
+                                (CamAng:yaw()-V:yaw())*90/FOV,
+                                -(CamAng:pitch()-V:pitch())*90/FOV
+                            )
+                        EGP:egpCircle(EGPIRSTTar,V2Pos,vec2(10))
+                        EGP:egpColor(EGPIRSTTar,vec4(210, 125, 45,170))
+                    }
+                }
+            }
+            timer(1000,tarDraw())
+        }
+    }
+    #EGP System End
+if (first()|dupefinished()) {
+    #Start with the first chip selected
+    EGP:egpClear()
+    changeControl(1)
+    
+    timer(0.5,tarDraw())
+}
+
+
+if (dupefinished()){reset()}
+
+function function refresh(){ return function(){
+    stoptimer("refresh")
+    if(!timerExists("refresh")) {timer("refresh",0.5,refresh())}
+    EGP:egpClear()
+    if (Gunner) {#leave if no one to show to
+        #Data
+        if (Gunner) {ScrSize=egpScrSize(Gunner)}
+        Label=Control["Label",string]
+        Ready=Weapon["Ready",number]
+        if (WeaponEnt) {ReloadProgress=WeaponEnt:acfReloadProgress()}
+        CurAmmo=Weapon["Shots Left",number]
+        if (Weapon["AmmoCount",number]!=0){
+            TotalAmmo=Weapon["AmmoCount",number]
+        }else{
+            TotalAmmo=Control["AmmoBox",wirelink]["Munitions",number]
+        }
+        Heat=Weapon["Heat",number]
+        Overheat=Weapon["OverHeat",number]
+        if (WeaponEnt) {HP=WeaponEnt:acfPropHealth()}
+        if (WeaponEnt) {MaxHP=WeaponEnt:acfPropHealthMax()}
+        #get muzvel, make it 0 (or select from an array?) if not found
+        if (WeaponEnt) {MuzVel=Weapon["Muzzle Velocity",number]}
+        
+        if (WeaponEnt){#Use Weapon's angles and such if it exists
+            Bearing=round(WeaponEnt:angles():yaw()*10)/10
+            Elevation=round(-WeaponEnt:angles():pitch()*10)/10
+            #Estimated Distance and Time
+            if (Rangetable) {#08.04.2024
+                EstD=getDistForAng(-WeaponEnt:angles():pitch(),Rangetable)
+                EstT=getETAForAng(-WeaponEnt:angles():pitch(),Rangetable)
+            }else{
+                EstD=round(-(MuzVel*cos(WeaponEnt:angles():pitch()))*(MuzVel*sin(WeaponEnt:angles():pitch())/(gravity()/39.37)),1)
+                EstT=round(abs(MuzVel*sin(WeaponEnt:angles():pitch())/(gravity()/39.37)),1)
+            }
+            
+            #Use a custom ranger with filters if this hits the contraption!
+            DistToHitPoint=round(WeaponEnt:pos():distance(HitPos)/39.37)
+        }else{#Use the camera's, otherwise.
+            Bearing=round(CamAng:yaw()*10)/10
+            Elevation=round(-CamAng:pitch()*10)/10
+            #Estimated Distance and Time
+            if (Rangetable) {#08.04.2024
+                EstD=getDistForAng(-CamAng:pitch(),Rangetable)
+                EstT=getETAForAng(-CamAng:pitch(),Rangetable)
+            }else{
+                EstD=round(-(MuzVel*cos(CamAng:pitch()))*(MuzVel*sin(CamAng:pitch())/(gravity()/39.37)),1)
+                EstT=round(abs(MuzVel*sin(CamAng:pitch())/(gravity()/39.37)),1)
+            }
+            
+            #Use a custom ranger with filters if this hits the contraption!
+            if (Gunner){DistToHitPoint=round((Gunner:pos():distance(HitPos)/39.37))}
+        }
+    
+        #SHOW DATA#
+        EGPSize=1
+        EGPSizes=table()
+        
+        #Show cursor and weapon angle
+        CrosshairX=getEGPID()
+        EGP:egpBox(CrosshairX,ScrSize/2,vec2(10,2))
+        EGP:egpColor(CrosshairX,vec4(255*(!Ready),255*Ready,0,100))
+        CrosshairY=getEGPID()
+        EGP:egpBox(CrosshairY,ScrSize/2,vec2(2,10))
+        EGP:egpColor(CrosshairY,vec4(255*(!Ready),255*Ready,0,100))
+        #Gun circle becomes gray when inactive
+        GunCircle=getEGPID()
+        GunCircleContrast=getEGPID()
+        if (WeaponEnt){
+            EGP:egpCircleOutline(GunCircle,ScrSize/2+vec2(
+                    (CamAng:yaw()-WeaponEnt:angles():yaw())*90/FOV,
+                    -(CamAng:pitch()-WeaponEnt:angles():pitch())*90/FOV
+                ),vec2(10))
+            EGP:egpColor(GunCircle,vec4(200*Active,200*Active,200*Active,200))
+            EGP:egpCircleOutline(GunCircleContrast,ScrSize/2+vec2(
+                    (CamAng:yaw()-WeaponEnt:angles():yaw())*90/FOV,
+                    -(CamAng:pitch()-WeaponEnt:angles():pitch())*90/FOV
+                ),vec2(12))
+            EGP:egpColor(GunCircleContrast,vec4(55+200*Active,55+200*Active,55+200*Active,200))
+            
+            EGP:egpFidelity(GunCircle,3+10*(1-ReloadProgress))
+            EGP:egpFidelity(GunCircleContrast,3+10*(1-ReloadProgress))
+        }
+        
+        EGPAmmoPanel=createPanel(ScrSize/2+vec2(175,200), vec2(250,200),vec4(200,200,200,25))
+        createText(WeaponIndex+": "+Label,vec2(0),AmmoColour,EGPAmmoPanel,1)
+        createText("Ammo:\n"+CurAmmo:toString()+"/"+TotalAmmo:toString(), vec2(0),AmmoColour,EGPAmmoPanel,1)
+        if (WeaponEnt) {createText("Heat: "+Heat:toString(),vec2(0),AmmoColour+vec4(255,0,0,0)*Overheat,EGPAmmoPanel,1)}
+        if (WeaponEnt) {createText("HP: "+HP:toString()+"/"+MaxHP,vec2(0),AmmoColour,EGPAmmoPanel,1)}
+        createText("",vec2(0),AmmoColour,EGPAmmoPanel,1)
+        if (WeaponEnt) {createText("Muz Vel: "+MuzVel+"m/s",vec2(0),AmmoColour,EGPAmmoPanel,1)}
+        createText("",vec2(0),AmmoColour,EGPAmmoPanel,1)
+        createText("Az: "+Bearing,vec2(0),AmmoColour,EGPAmmoPanel,1)
+        createText("El: "+Elevation,vec2(0),AmmoColour,EGPAmmoPanel,1)
+        createText("",vec2(0),AmmoColour,EGPAmmoPanel,1)
+        createText("EstD: "+EstD,vec2(0),AmmoColour,EGPAmmoPanel,1)
+        createText("EstT: "+EstT,vec2(0),AmmoColour,EGPAmmoPanel,1)
+        createText("Range: "+DistToHitPoint,vec2(0),AmmoColour,EGPAmmoPanel,1)
+        if (LockedPos) {
+            createText("Range (GPS Tar): "+round(LockedPos:distance(WeaponEnt:pos())/39.37),vec2(0),AmmoColour,EGPAmmoPanel,1)
+        }
+        if (Radar["Detected",number]) {
+            createText("Range (Radar): "+round(Radar["Position",array][TarIndex,vector]:distance(WeaponEnt:pos())/39.37),vec2(0),AmmoColour,EGPAmmoPanel,1)
+        }
+        
+        #Zeroing lines proudly stolen from v2
+        #This part is zeroing lines
+        Angle=ZeroOffset
+        DistR=0
+        EGP0MetersBar=getEGPID()
+        EGP0MetersText=getEGPID()
+        EGP:egpBox(EGP0MetersBar,ScrSize/2+vec2(0,Angle*(ScrSize[1]/FOV)),vec2(150,2))
+        EGP:egpText(EGP0MetersText,DistR+"",ScrSize/2+vec2(-75,Angle*(ScrSize[1]/FOV)))
+        EGP:egpColor(EGP0MetersText,AmmoColour)
+        EGP:egpColor(EGP0MetersBar,vec4(0,0,255,255))
+        
+        DistR=150
+        if (Rangetable) {
+            Angle=getAngForDist(DistR,Rangetable,0) #08.04.2024
+        }else{
+            Angle = asin(fromUnit("m",DistR)*gravity()/(fromUnit("m/s",MuzVel)*fromUnit("m/s",MuzVel)))/2
+        }
+        
+        Angle=Angle+ZeroOffset
+        
+        EGP150MetersBar=getEGPID()
+        EGP150MetersText=getEGPID()
+        EGP:egpBox(EGP150MetersBar,ScrSize/2+vec2(0,Angle*(ScrSize[1]/FOV)),vec2(150,2))
+        EGP:egpText(EGP150MetersText,DistR+"",ScrSize/2+vec2(-75,Angle*(ScrSize[1]/FOV)))
+        EGP:egpColor(EGP150MetersText,AmmoColour)
+        EGP:egpColor(EGP150MetersBar,vec4(0,0,255,255))
+        
+        DistR=300
+        if (Rangetable) {
+            Angle=getAngForDist(DistR,Rangetable,0) #08.04.2024
+        }else{
+            Angle = asin(fromUnit("m",DistR)*gravity()/(fromUnit("m/s",MuzVel)*fromUnit("m/s",MuzVel)))/2
+        }
+        
+        Angle=Angle+ZeroOffset
+        
+        EGP300MetersBar=getEGPID()
+        EGP300MetersText=getEGPID()
+        EGP:egpBox(EGP300MetersBar,ScrSize/2+vec2(0,Angle*(ScrSize[1]/FOV)),vec2(150,2))
+        EGP:egpText(EGP300MetersText,DistR+"",ScrSize/2+vec2(-75,Angle*(ScrSize[1]/FOV)))
+        EGP:egpColor(EGP300MetersText,AmmoColour)
+        EGP:egpColor(EGP300MetersBar,vec4(0,0,255,255))
+        
+        #Show locked pos
+        EGPLockedPosBox=getEGPID()
+        EGPLockedPosBoxTracker=getEGPID()
+        if (LockedPos) {
+            EGP:egpBoxOutline(EGPLockedPosBox,vec2(),vec2(50))
+            EGP:egpColor(EGPLockedPosBox,vec4(0,100,150,255))
+            
+            EGP:egp3DTracker(EGPLockedPosBoxTracker,LockedPos)
+            EGP:egpParent(EGPLockedPosBox,EGPLockedPosBoxTracker)
+        }
+        
+        #Radar lead
+        EGPRadarLeadPosBox=getEGPID()
+        EGPRadarLeadPosBoxTracker=getEGPID()
+        if (RadarLock) {
+            local RadarLeadPos = (Radar["Position",array][TarIndex,vector]
+                +Radar["Velocity",array][TarIndex,vector]
+                -WeaponEnt:vel())
+            
+            local RadarLeadETA = (Radar["Position",array][TarIndex,vector]:distance(WeaponEnt:pos())
+                /fromUnit("m",MuzVel))
+            
+            if (Rangetable) {
+                RadarLeadETA = getETAForDist(Radar["Position",array][TarIndex,vector]:distance(WeaponEnt:pos())/39.37
+                    ,Rangetable)
+            }
+            
+            if (MuzVel) {
+                
+                RadarLeadPos=
+                    (Radar["Position",array][TarIndex,vector]
+                    +((Radar["Velocity",array][TarIndex,vector]-WeaponEnt:vel())*RadarLeadETA))
+            }
+            
+            EGP:egpCircleOutline(EGPRadarLeadPosBox,vec2(),vec2(15))
+            EGP:egpColor(EGPRadarLeadPosBox,vec4(0,100,150,255))
+            EGP:egp3DTracker(EGPRadarLeadPosBoxTracker,RadarLeadPos)
+            EGP:egpParent(EGPRadarLeadPosBox,EGPRadarLeadPosBoxTracker)
+        }
+        
+        #Action Menu#
+        EGPActionPanel=createPanel(ScrSize/2+vec2(-300,200), vec2(100,200),vec4(200,200,200,25)+vec4(-200,100,-200,0)*ActionMenuActivate)
+        foreach (K:number,V:string = ActionMenuItems) {
+            createText(V,vec2(0),AmmoColour+vec4(0,100,0,0)*(ActionMenuIndex==K),EGPActionPanel,1)
+        }
+        
+        #SHOW ENGINE DATA#
+        if (Engine){
+            createText("RPM: "+Engine["RPM",number],ScrSize/2+vec2(0,ScrSize[2]/2-40),EngineColour,0,0)
+            createText("Fuel: "+round(Engine["Total Fuel",number]),ScrSize/2+vec2(0,ScrSize[2]/2-20),EngineColour,0,0)
+            createText("Heat: "+round(Engine["EngineHeat",number]),ScrSize/2+vec2(100,ScrSize[2]/2-40),EngineColour,0,0)
+            createText("Fuel Use: "+round(Engine["Fuel Use",number]),ScrSize/2+vec2(100,ScrSize[2]/2-20),EngineColour,0,0)
+            createText("Engine Health: "+Engine:entity():acfPropHealth()+"/"+Engine:entity():acfPropHealthMax(),ScrSize/2+vec2(250,ScrSize[2]/2-40),EngineColour,0,0)
+            
+            createText("Speed: "+round((Engine:entity():vel():length()/39.37)*3.6)+"km/h",ScrSize/2+vec2(-150,ScrSize[2]/2-20),EngineColour,0,0)
+            #createText("Throttle: "+round(Engine["Throttle",number])+"%",ScrSize/2+vec2(-150,ScrSize[2]/2-40),EngineColour,0,0)
+        }
+        
+        EGPLeadPosBox=getEGPID()
+        EGPLeadPosBoxTracker=getEGPID()
+    }
+}}
+
+event tick() {
+    if (!Control_Chips_Array:count()){exit()}
+    
+    ########################
+    #PARAMS ARE AROUND HERE#
+    ########################
+    
+    
+    #GET DATA#
+    #Logic and Params#
+    Gunner=Pod["Driver",entity]
+    if(Cam){#Local movement enabled works best!
+        CamAng=Cam["CamAng",angle]
+    }elseif(Gunner){
+        CamAng=Gunner:eyeAngles()
+    }
+    if (WeaponEnt) {
+        Gun=WeaponEnt
+        rangerFilter(Gun)
+        
+        HitPos=rangerOffset(1000000,Gun:pos(),Cam["CamDir",vector]):position()#Cam["HitPos",vector] Cam hitpos no work for some reason
+    }elseif(Pod){
+        HitPos=Pod["AimPos",vector]
+    }
+    if (Gunner) {
+        Fire=Gunner:keyAttack1()
+        Reload=Gunner:keyReload()
+        Unload=Gunner:keyPressed("U")
+        
+        #Lock aim pos
+        if (Gunner:keyPressed("B")) {
+            LockedPos=HitPos
+        }
+        
+        #Action Menu Framework#
+        #here you set the item names
+        ActionMenuItems=array("Unlock GPS",
+            "IDF: "+IDF,
+            "Use GPS: "+GPSLock,
+            "Use Radar: "+RadarLock,
+            "Radar to GPS: "+RadarToGPS,
+             "Radar: "+RadarOn,
+             "IRST: "+IRSTOn)
+        
+        ActionMenuActivate=Gunner:keyPressed("backquote")
+        #here you set the code to be ran
+        if (!ActionMenuChanged&ActionMenuActivate) {
+            switch (ActionMenuIndex) {
+                case 1,
+                    LockedPos=vec(0)
+                    EGP:egpRemove(EGPLockedPosBox)
+                    EGP:egpRemove(EGPLockedPosBoxTracker)
+                    EGP:egpRemove(EGPLeadPosBox)
+                    EGP:egpRemove(EGPLeadPosBoxTracker)
+                break
+                case 2,
+                    IDF=!IDF
+                break
+                case 3,
+                    GPSLock=!GPSLock
+                    if (!GPSLock){
+                        Control["TarPos",vector]=vec(0)
+                    }
+                break
+                case 4,
+                    RadarLock=!RadarLock
+                    if (!RadarLock){
+                        Control["TarPos",vector]=vec(0)
+                    }
+                break
+                case 5,
+                    RadarToGPS=!RadarToGPS
+                break
+                case 6,
+                    RadarOn=!RadarOn
+                    if (RadarOn) {
+                        EGP:egpRemove(EGPRadarLeadPosBox)
+                        EGP:egpRemove(EGPRadarLeadPosBoxTracker)
+                    }
+                break
+                case 7,
+                    IRSTOn=!IRSTOn
+                break
+                
+                default,
+                    print("Invalid Action Menu Action")
+            }
+        }
+        if (!ActionMenuChanged&Gunner:keyPressed("mouse_wheel_up")) {
+            ActionMenuIndex--
+        }
+        if (!ActionMenuChanged&Gunner:keyPressed("mouse_wheel_down")) {
+            ActionMenuIndex++
+        }
+        ActionMenuChanged=Gunner:keyPressed("mouse_wheel_down")|Gunner:keyPressed("mouse_wheel_up")|Gunner:keyPressed("backquote")
+        ActionMenuIndex=clamp(ActionMenuIndex,1,ActionMenuItems:count())
+        if (ActionMenuChanged) {refresh()()}
+        
+        #Action, lock on GPS and stuff#
+        Control["TarThePos",number]=GPSLock|RadarLock
+        Control["TarPos",vector]=LockedPos#always make the control chip set the weapon's tarpos
+        if(RadarLock){
+            Control["TarPos",vector]=Radar["Position",array][TarIndex,vector]
+            Control["TarVel",vector]=Radar["Velocity",array][TarIndex,vector]
+        }
+        
+        #Action Radar to GPS
+        if (RadarToGPS) {
+            LockedPos=Radar["Position",array][TarIndex,vector]
+        }
+        
+        #Action , IDF
+        Control["IDF",number]=IDF
+        
+        FLIR=Gunner:keyWalk()
+        FOV=90-Gunner:keySprint()*80
+        
+        #Toggle Active
+        if(!Actived&Gunner:keyAttack2()){Active=!Active}
+        Actived=Gunner:keyAttack2()
+        
+        #Radar Target Selection
+        if(!TarChanged&Gunner:keyPressed("H")){TarIndex++, if (TarIndex>Radar["Position",array]:count()){TarIndex=1}}
+        TarChanged=Gunner:keyPressed("H")
+        
+        #Choose via number keys
+        if (!Changed) {
+            if (Gunner:keyPressed("1")) {Changed=1,changeControl(1)}
+            if (Gunner:keyPressed("2")) {Changed=1,changeControl(2)}
+            if (Gunner:keyPressed("3")) {Changed=1,changeControl(3)}
+        }
+        Changed=Gunner:keyPressed("3")|Gunner:keyPressed("2")|Gunner:keyPressed("1")
+        if (Changed) {timer(0,refresh())}
+        
+        # zero offset in pitch angle so we can aim for ranges outside the screen
+        if (!(Gunner:keyPressed("up")&Gunner:keyPressed("down"))) { #reset zero offset if both are pressed at the same time
+            ZeroOffset=ZeroOffset+(-Gunner:keyPressed("up")+Gunner:keyPressed("down"))/10
+        }elseif(Gunner:keyPressed("up")&Gunner:keyPressed("down")){
+            ZeroOffset=0
+            timer(0.1, function() {ZeroOffset=0})
+        }
+        
+        #SHOW LEAD EACH TICK FOR ACCURACY 09.09.2024
+        HitPosGun=HitPos#rangerOffset(1000000,WeaponEnt:pos(),WeaponEnt:forward()):position()
+        if(WeaponEnt) {DistToHitPoint=round(WeaponEnt:pos():distance(HitPosGun)/39.37)}
+        MuzVel=Weapon["Muzzle Velocity",number]
+        if (DistToHitPoint&HitPosGun) {
+            #Show lead
+            LeadPos = (HitPosGun+entity():vel())
+            
+            LeadETA = 0
+            
+            Ang=0
+            
+            if (MuzVel) {
+                DistR=DistToHitPoint
+                Ang=asin(fromUnit("m",DistR)*gravity()/(fromUnit("m/s",MuzVel)*fromUnit("m/s",MuzVel)))/2
+                LeadETA = DistToHitPoint/MuzVel
+                LeadPos=(HitPosGun+entity():vel()*LeadETA)-vec(0,0,sin(Ang+ZeroOffset)*DistToHitPoint*39.97)
+            }
+            
+            if (Rangetable) {
+                LeadETA = getETAForDist(DistToHitPoint,Rangetable)
+                Ang=getAngForDist(DistToHitPoint,Rangetable,0)
+                LeadPos=(HitPosGun+(entity():vel()*LeadETA))-(vec(0,0,sin(Ang+ZeroOffset)*DistToHitPoint)*39.97)
+            }
+            
+            EGP:egpCircleOutline(EGPLeadPosBox,vec2(),vec2(15))
+            EGP:egpColor(EGPLeadPosBox,vec4(0,100,200,255))
+            EGP:egp3DTracker(EGPLeadPosBoxTracker,LeadPos)
+            EGP:egpParent(EGPLeadPosBox,EGPLeadPosBoxTracker)
+        }
+        
+    }else{Active=0}
+    #SET DATA#
+    
+    Control["Fire",number]=Fire
+    Control["Reload",number]=Reload
+    Control["Unload",number]=Unload
+    
+    Control["Active",number]=Active
+    TarAngOut=Control["TarAng",angle]=(CamAng+ang(vec(ZeroOffset,0,0)))*Active
+    
+    Cam["Activated",number]=Active
+    Cam["FLIR",number]=FLIR
+    Cam["FOV",number]=FOV
+    
+    Radar["Active",number]=RadarOn
+    
+    IRST["Active",number]=IRSTOn
+}
+
+if (first()) {
+    refresh()()
+}
+
+#[
+
+This one only does UI stuff and firing/indicating selected weapon
+
+
+GET CURRENT CONTROL CHIP
+ACTIVATE CHIP
+GET DATA
+SET DATA
+SHOW DATA
+
+Needs to show:
+CENTER OF SCREEN
+GUN ANGLE RELATIVE TO SCREEN
+MAYBE ALSO GUN RAYCAST ENDPOINT
+
+CURRENTLY SELECTED WEAPON/AMMO
+CURRENT AMMO/MAX AMMO
+
+CURRENT HEAT/OVERHEAT STATUS
+CURRENT HP/MAX HP
+
+BEARING
+ELEVATION
+EXPECTED HORIZONTAL TRAVEL DISTANCE
+EXPECTED TRAVEL TIME
+MUZZLE VELOCITY
+
+RANGE TO AIMPOINT
+
+RANGETABLE ON SIGHT, RANGE BARS
+
+
+MAYBE HAVE A SEPARATE CHIP TO SHOW TARGET GPS POSITION/RADAR OUTPUT?
+
+]#

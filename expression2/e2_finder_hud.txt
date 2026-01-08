@@ -1,0 +1,21 @@
+@name e2 finder hud
+@inputs Hud:wirelink
+@outputs 
+@persist Found:array L J
+@trigger 
+
+timer("A",250)
+if(first()){Hud:egpClear()}
+J=Found:count()+1
+findInSphere(owner():pos(),99999999)
+Found = findToArray()
+if(clk("A")){Hud:egpClear(),for(K=1,Found:count()){
+    if(Found[K,entity]:model()==entity():model()){L++,J++
+Hud:egp3DTracker(K,Found[K,entity]:pos())
+Hud:egpBox(L,vec2(),vec2(200,100))
+Hud:egpAlpha(L,50)
+Hud:egpColor(L,vec(0,100,255))
+Hud:egpText(J,Found[K,entity]:name(),vec2())
+Hud:egpParent(J,K)
+Hud:egpParent(L,K)
+if(L==Found:count()){L=1},if(J==Found:count()*2){J=Found:count()+1}}},timer("A",250)}

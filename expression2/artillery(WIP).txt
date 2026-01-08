@@ -1,0 +1,50 @@
+@name artillery(needs upgrade)
+@inputs Tar:entity
+@outputs 
+@persist Bullet:entity Fs Ft F:vector H Tx Ty Tz
+@trigger 
+
+runOnKeys(owner(),1)
+
+interval(10)
+if(first()){
+    
+    Bullet=entity():isWeldedTo()
+    Bullet:propDrag(0)
+    
+    H=1000
+    
+    entity():propDrag(0) 
+
+}
+#mv^2/2=gmh
+Tx=(Tar:pos()-Bullet:pos()):x()
+Ty=(Tar:pos()-Bullet:pos()):y()
+Tz=(Tar:pos()-Bullet:pos()):z()
+
+
+#ft is force fs is time
+Ft=sqrt((max(Tz,0,-Tz)+H)*gravity()*2)
+Fs=Ft/gravity()
+
+F=Tar:vel()+vec(Tx/Fs/2,Ty/Fs/2,(Ft))
+
+
+
+if(owner():keyPressed("L")&!clk()){Bullet:propFreeze(0)
+    Bullet:applyForce(F*Bullet:mass())}
+
+
+
+
+
+
+
+#[
+    Documentation and examples are available at:
+    https://github.com/wiremod/wire/wiki/Expression-2
+
+    Discord is available at https://discord.gg/cqJ45CT
+    Reddit is available at https://www.reddit.com/r/wiremod
+    Report any bugs you find here https://github.com/wiremod/wire/issues
+]#

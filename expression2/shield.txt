@@ -1,0 +1,21 @@
+@name shield
+@inputs 
+@outputs 
+@persist O [Prop Prop2 Material Material2]:string [P P2]:entity
+@trigger 
+#press G to open shield T to close
+Prop="models/hunter/blocks/cube4x4x4.mdl"
+Prop2="models/props_phx/construct/metal_plate_curve360x2.mdl"
+Material="models/effects/comball_sphere"
+
+runOnTick(1)
+
+if(owner():keyPressed("G")){O=1}
+if(owner():keyPressed("T")){O=0,P:propDelete(),P2:propDelete(),reset()}
+if(O){if(changed(O)){P=propSpawn(Prop,owner():pos(),1),P2=propSpawn(Prop2,owner():pos(),1)}
+    noCollideAll(P,1)
+    noCollideAll(P2,1)
+    P:setMaterial(Material)
+    P2:setMaterial(Material)
+P:reposition(owner():pos()+vec(0,0,0))
+P2:reposition(owner():pos()+vec(0,0,0))}

@@ -1,0 +1,32 @@
+@name Ballistic Missile
+@inputs 
+@outputs 
+@persist [Tar Missile]:entity [Vec Dot]:vector A B Fuse
+@trigger 
+runOnChat(1)
+
+if(first()){
+    Dot=entity():pos()+vec(0,0,5000)
+    timer("A",10)
+    A=0,B=0
+    #fuse is max 5000
+    Fuse=4500
+}
+if(clk("A")){timer("A",10)}
+function string ls(Index){
+    return owner():lastSaid():lower():explode(" ")[Index,string]    
+}
+if(chatClk(owner())&ls(1)=="/missile"&ls(2)){hideChat(1)
+    Tar=findPlayerByName(ls(2))
+    Missile=propSpawn("models/props_phx/amraam.mdl",entity():pos()+vec(0,0,50),0)
+    A=1
+    B=0
+    timer("fuse",Fuse)
+}
+if(A&clk("A")){
+Vec=Dot-Missile:pos()
+Missile:applyForce(Vec+$Vec*10)
+}
+if(clk("fuse")){B=1,A=0}
+if(B&clk("A")){Vec=Tar:pos()-Missile:pos()
+Missile:applyForce(Vec*100)}

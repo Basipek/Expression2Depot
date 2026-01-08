@@ -1,0 +1,41 @@
+@name Aiming Computer ApplyForce Big Mech Adapt
+@inputs Gun:entity Fire Active EGP:wirelink [Gunner,Left,Right,Hip,LegHip]:entity Angles:angle
+@outputs Fire
+@persist El Be Ell Bel Elr Ber Vl Hl Vr Hr Hh Tar:angle [LeftW,RightW]:wirelink
+@trigger 
+
+if(dupefinished()){reset()}
+if(first()){
+    RightW=Right:wirelink()
+    LeftW=Left:wirelink()
+}
+runOnTick(1)
+Tar=Angles
+
+El=Hip:toLocal(Angles):pitch()
+Be=Hip:toLocal(Angles):yaw()+90
+
+Ell=Left:toLocal(Angles):pitch()
+Bel=Left:toLocal(Angles):yaw()
+
+Elr=Right:toLocal(Angles):pitch()
+Ber=Right:toLocal(Angles):yaw()
+
+Vl=(Ell+$Ell*5)*Left:mass()*1000
+Hl=(Bel+$Bel*5)*Left:mass()*1000
+
+Vr=(Elr+$Elr*5)*Right:mass()*1000
+Hr=(Ber+$Ber*5)*Right:mass()*1000
+
+Hh=(Be+$Be*5)*Hip:mass()*50
+if(Active){Left:applyAngForce(ang(vec(Vl,Hl,0))),Right:applyAngForce(ang(vec(Vr,Hr,0))),Hip:applyAngForce(ang(vec(0,Hh,0)))}
+
+Fire=Fire
+
+EGP:egpBox(1,egpScrSize(Gunner)/2,vec2(50))
+EGP:egpColor(1,vec4(0,255,0,100))
+EGP:egpBox(2,vec2(egpScrW(Gunner)*((LegHip:toLocal(Angles):yaw())/180),egpScrH(Gunner)/2+15),vec2(25,50))
+EGP:egpColor(2,vec4(255,0,0,100))
+EGP:egpText(3,"MultiCannon: "+RightW["Shots Left",number],egpScrSize(Gunner)/2+vec2(50,0))
+EGP:egpText(4,"Cannon: "+LeftW["Shots Left",number],egpScrSize(Gunner)/2+vec2(-100,0))
+

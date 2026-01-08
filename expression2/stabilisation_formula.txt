@@ -1,0 +1,19 @@
+@name Stabilisation Formula
+@inputs GUN:entity
+@outputs Fire
+@persist ANG:angle POS:vector VEC:vector
+@trigger 
+
+runOnTick(1)
+
+Fire=owner():keyPressed("B")
+
+if(first()){POS=GUN:pos()}
+
+VEC=(POS-GUN:pos())*5*GUN:mass()
+
+GUN:applyForce(VEC+$VEC*5)
+
+AIM=owner():aimPos()
+ANG=(ang(-GUN:elevation(AIM),-GUN:bearing(AIM),-GUN:angles():roll()))*GUN:mass()*10
+GUN:applyAngForce(ANG+$ANG*5)

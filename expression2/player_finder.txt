@@ -1,0 +1,13 @@
+@name player finder
+@inputs Next
+@outputs Player:entity Name:string Pos:vector X Y Z
+@persist K
+@trigger 
+if(first()){K=1}
+if(Next&~Next){K++}
+if(K==players():count()+1){K=1}
+if(clk("A")|first()){timer("A",10),Player=players()[K,entity],Name=Player:name(),Pos=Player:pos()
+    X=Pos:x()
+    Y=Pos:y()
+    Z=Pos:z()
+}

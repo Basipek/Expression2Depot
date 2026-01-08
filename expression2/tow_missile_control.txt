@@ -1,0 +1,15 @@
+@name TOW CONTROL
+@inputs GUN:entity FIRE RELOAD AIM:vector Active LEFT RIGHT UP DOWN
+@outputs Fire Reload Pitch Yaw
+@persist 
+@trigger 
+
+if(RIGHT||LEFT){Yaw=180*(RIGHT-LEFT)}else{Yaw=0}
+if(UP||DOWN){Pitch=180*(UP-DOWN)}else{Pitch=0}
+
+Fire=FIRE
+Reload=RELOAD
+if(!Active){Pitch=0,Yaw=0}
+runOnTick(1)
+if(Active){GUN:setAng(GUN:angles()+clamp((AIM-GUN:pos()):toAngle()-GUN:angles(),-1,1))}
+GUN:setPos((entity():toWorld(vec(0,0,50))))

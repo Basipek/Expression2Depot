@@ -1,0 +1,59 @@
+@name Artillery Calculatah (multiple guns)
+@inputs Gun:entity EGP:wirelink Vel
+@outputs Fire Reload TargetPos:vector
+@persist Tar:vector Angle A AD:vector F B Guns:array
+@trigger 
+
+runOnTick(1)
+runOnKeys(owner(),1)
+
+if(keyClk(owner())&owner():keyPressed("H")){Fire=1}else{Fire=0}
+if(keyClk(owner())&owner():keyPressed("M")){Angle=45}
+if(owner():keyPressed("B")){Tar=owner():aimPos()}
+
+#Multiple Guns
+if(owner():keyPressed("L")&keyClk():owner()&owner():aimEntity():isValid()&!owner():aimEntity():isWorld()){
+    Guns:pushEntity(owner():aimEntity())}
+
+
+TargetPos=Tar
+if(first()){Angle=45
+    
+    #number to add
+    A=0.05
+    EGP:egpClear()
+    EGP:egpBox(1,vec2(10,10),vec2(100,100))
+    B=0.001
+    #number to subtract
+    
+}
+if(owner():keyPressed("J")){Angle=Angle-B}
+if(owner():keyPressed("N")){Reload=1}else{Reload=0}
+
+
+F=Vel*cos(Angle)*((Vel*sin(Angle))/(gravity()/350))*6
+
+#Multiple Guns
+foreach(K,Gun:entity=Guns){
+
+AD=(Tar-Gun:pos())
+
+if(
+
+Gun:pos():distance(Tar)<=F
+
+){Angle=Angle+A}else{if(Gun:pos():distance(Tar)-F>5){Angle=Angle-B}else{if(Gun:pos():distance(Tar)-F>0.5){
+    Angle=Angle-0.0001}}}
+
+Gun:setAng(ang(-Angle,AD:toAngle()[2],0))
+}
+if(Tar:distance(Gun:pos())-(F)>-50&
+Tar:distance(Gun:pos())-(F)<50){
+    EGP:egpColor(1,vec4(0,255,100,50))
+    EGP:egpText(2,Gun:pos():distance(Tar):toString()+" || " + (F):toString(),vec2(25,25))
+}else{
+    EGP:egpColor(1,vec4(255,0,0,50))
+    EGP:egpText(2,Gun:pos():distance(Tar):toString()+" || " + (F):toString(),vec2(25,25))
+}
+
+

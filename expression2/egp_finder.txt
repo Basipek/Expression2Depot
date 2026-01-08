@@ -1,0 +1,16 @@
+@name 
+@inputs HUD:wirelink 
+@outputs 
+@persist Ent:entity
+@trigger 
+
+runOnTick(1)
+
+if(first()){HUD:egpBox(1,vec2(0,0),vec2(100,100)), HUD:egpColor(1,vec4(255,0,0,100)),Ent=findPlayerByName("Arbur")}
+    
+    HUD:egp3DTracker(2,Ent:pos())
+    HUD:egpParent(1,2)
+    
+
+HUD:egpPos(2,Ent:pos()) 
+

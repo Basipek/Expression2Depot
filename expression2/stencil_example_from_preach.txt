@@ -1,0 +1,40 @@
+@persist Arr:table Chip:entity
+if(first()){
+    Chip = entity()
+    holoCreate(1, Chip:toWorld(vec(0, 40, 0)), vec(5), Chip:angles(), vec(255), "plane")
+    holoParent(1, Chip)
+
+    stencilCreate(1, _STENCIL_WHITELIST) #no need to add the type as _STENCIL_WHITELIST is the default type
+
+    local SizeB = holoEntity(1):boxSize()*2.5
+    local Pos   = holoEntity(1):pos()
+    local OffS  = 0.1
+    local H     = 150
+    holoCreate(2, holoEntity(1):toWorld(vec(SizeB[1],0,-H/2)))  holoScaleUnits(2, vec(OffS,SizeB[2]*2,H))
+    holoCreate(3, holoEntity(1):toWorld(vec(-SizeB[1],0,-H/2))) holoScaleUnits(3, vec(OffS,SizeB[2]*2,H))
+    
+    holoCreate(4, holoEntity(1):toWorld(vec(0,SizeB[2],-H/2)))  holoScaleUnits(4, vec(SizeB[1]*2,OffS,H))
+    holoCreate(5, holoEntity(1):toWorld(vec(0,-SizeB[2],-H/2))) holoScaleUnits(5, vec(SizeB[1]*2,OffS,H))
+    
+    holoCreate(6, holoEntity(1):toWorld(vec(0,0,-H)))           holoScaleUnits(6, vec(SizeB[1],SizeB[2],OffS)*2)
+    
+    holoCreate(7, holoEntity(1):toWorld(vec(0,0,-H)), vec(1), Chip:angles(), vec4(255), owner():model())
+    holoCreate(8, holoEntity(1):toWorld(vec(0,0, 0)), vec(1), Chip:angles()-ang(90,0,0), vec4(255), "models/props_building_details/Storefront_Template001a_Bars.mdl")
+    holoScaleUnits(8, holoEntity(1):boxSize():setX(0)*5)
+    
+    
+    for(I=1, holoAmount()-1){
+        holoParent(I+1, 1) holoAlpha(I+1, 0)
+        stencilAddEntity(1, holoEntity(I+1))
+    }
+    
+    timer("dance", 1000)
+
+    stencilAddReferenceEntity(1, holoEntity(1)) #add an entity to render with the stencil
+}
+
+if(clk("dance")){
+    holoAnim(7, "ACT_GMOD_TAUNT_DANCE", 0, 1)
+    local T = holoAnimLength(7)
+    timer("dance", T*1000)
+}

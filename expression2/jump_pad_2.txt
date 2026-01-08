@@ -1,0 +1,12 @@
+@name jump pad 2
+@inputs 
+@outputs 
+@persist P:entity Tar:entity
+@trigger 
+runOnTick(1)
+if (first()) {P=propSpawn("models/maxofs2d/hover_plate.mdl",entity():pos()+vec(0,0,50),1),noCollideAll(P,1)}
+runOnTick(1)
+P:setPos(entity():pos())
+Tar=rangerOffsetHull(P,P:pos(),P:pos()+vec(0,0,50)):entity()
+if (Tar:isPlayer()){Tar:applyPlayerForce(entity():pos()+vec((Tar:vel()[1]*2),(Tar:vel()[2]*2),800)-Tar:pos())
+}

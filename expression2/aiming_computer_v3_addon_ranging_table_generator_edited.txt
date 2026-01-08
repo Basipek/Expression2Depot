@@ -1,0 +1,128 @@
+@name Ranging Table Generator EDITED
+@persist MVel Ang AMin AMax AStp Stp NStp Delay Drag G:vector2  Table:table Ready
+@inputs Dist AngleIn
+@outputs Table:table AngOut Ready DistOut
+
+
+if(first()|dupefinished()) {
+    Crate = entity():isWeldedTo()
+    Drag = Crate:acfDragCoef()
+    Ready = 0
+    
+    if(!Drag) {
+        hint("E2 must be placed on valid ammo crate",5)
+        entity():soundPlay(2,1,"buttons/button10.wav")
+        exit()
+    }
+    
+    
+    ####### EDIT ########
+    
+    AMin = 0                    #angle parameters
+    AMax = 90
+    AStp = 5                    #angle between entries
+
+    MVel = Crate:acfMuzzleVel()
+    NStp = 100                  #sim steps for arc
+    Stp = 2*MVel*39.37/(600*NStp)
+    Delay = 500                 #keep ops down a little
+
+
+    #####################
+
+    Ang = AMax
+    G = vec2(0,-gravity())
+    Table = table()
+    
+    timer("range", 0)
+}
+
+
+
+if(clk("range")) {  #Iterate angle
+    local V = MVel*39.37*vec2(cos(Ang), sin(Ang))  
+    local P = vec2(0,0)
+    local T = 0
+            
+    for(J=1,NStp) {     #Iterate arc RK4    
+        A=J+1
+        A=A
+        #local D = V:length()*Drag
+                
+        local A1 = G - Drag*V:length()*V
+    
+        local V2 = V + A1*Stp/2
+        local A2 = G - Drag*V2:length()*V2
+    
+        local V3 = V + A2*Stp/2
+        local A3 = G - Drag*V3:length()*V3
+        
+        local V4 = V + A3*Stp
+        local A4 = G - Drag*V4:length()*V4
+        
+        P += (Stp/6)*(V + 2*(V2+V3) + V4)
+        V += (Stp/6)*(A1 + 2*(A2 + A3) + A4)
+        T += Stp
+
+        if(P:y() < 0) {   #hits "ground"
+            local TPast = P:y()/V:y() #time past hitting y=0
+            Dist = P:x() -TPast*V:x() #netwon back to surface level       
+            T -= TPast               
+            
+            Table:pushVector(vec(toUnit("m",round(Dist)),Ang,round(T,1)))#Basipek made this return dist in m
+            break
+        }
+    }
+    
+    
+    if(Ang > AMin) {
+        timer("range",Delay)
+    }
+    else{
+        Ready = 1
+        entity():soundPlay(1,3,"garrysmod/content_downloaded.wav")
+        #hint("Ranging table stored as "+TABLENAME, 5)
+        #fileWrite(TABLENAME,jsonEncode(Table))
+    }
+    
+    Ang = Ang - AStp
+}
+
+function number getAngForDist(Dist:number,IDF:number) {
+    if (Dist) {
+        local AngOut=0
+        foreach (K:number,I:vector = Table) {
+            if (((I:x()>Dist&IDF&I:y()>45)|(I:x()<Dist&!IDF&I:y()<45))) {
+                local IndOff=0
+                if (IDF) {IndOff=1}else{IndOff=-1}
+                AngOut=I:y()+(I:y()-Table[K+IndOff,vector]:y())/(I:x()-Table[K+IndOff,vector]:x())*(Dist-I:x())
+                if(Ready){hint(K:toString(),5)}
+                return AngOut
+            }else{
+                continue
+            }
+        }
+    }
+    return 0
+}
+
+    function number getDistForAng(Dist:number,Table:table) { #08.04.2024
+        if (Dist) {#Dist in meters
+            IDF=Dist>45
+            local AngOut=0
+            foreach (K:number,I:vector = Table) {
+                if (((I:y()>Dist&IDF&I:y()>45)|(I:y()<Dist&!IDF&I:y()<45))) {
+                    local IndOff=0
+                    if (IDF) {IndOff=1}else{IndOff=-1}
+                    AngOut=I:x()+(I:x()-Table[K+IndOff,vector]:x())/(I:y()-Table[K+IndOff,vector]:y())*(Dist-I:y())
+                    return AngOut
+                }else{
+                    continue
+                }
+            }
+        }
+        return 0
+    }
+
+if (Dist!=0) {AngOut=getAngForDist(Dist,0)}
+if (AngleIn!=0) {DistOut=getDistForAng(AngleIn,Table)}

@@ -1,0 +1,11 @@
+@name ACE Dynamic No-Overheat ROF
+@inputs Heat
+@outputs ROF
+@persist Overheat
+@trigger 
+@strict
+
+Overheat=200
+ROFDefault=666
+
+ROF=ROFDefault*((Overheat-Heat+30)/Overheat)^2

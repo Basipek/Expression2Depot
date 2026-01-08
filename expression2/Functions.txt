@@ -1,0 +1,9 @@
+@name #Functions
+@inputs 
+@outputs 
+@persist 
+@trigger 
+
+function string ls(Index){
+    return owner():lastSaid():lower():explode(" ")[Index,string]
+}

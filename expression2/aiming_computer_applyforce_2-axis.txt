@@ -1,0 +1,86 @@
+@name Aiming Computer ApplyForce 2-Axis
+@inputs Vertical:entity Horizontal:entity Parent:entity Gunner:entity EGP:wirelink [Gun1,Gun2]:wirelink 
+@outputs Ang:angle FLIR FOVn
+@persist Ang:angle TarAng:angle V H R Re El Be [Guns,Names]:array SelGun Seld FLIR FOV FLIRd FOVd Helpd
+@trigger 
+
+#Vertical usually main gun, Horizontal is gun base
+#Guns array is for weapon selection
+
+runOnTick(1)
+
+if(first()|dupefinished()|!Guns|!Names){
+    
+    #Gun selection
+    SelGun=1
+    Seld=1
+    Guns=array(Gun1,Gun2)
+    Names=array("Autocannon","TOW")
+}
+
+
+if(Vertical&Horizontal&Parent){
+
+#Camera Controller Controls
+
+if(FLIRd&Gunner:keyWalk()){
+    FLIR=!FLIR
+}
+if(FOVd&Gunner:keySprint()){
+    FOV=!FOV
+    FOVd=0
+}
+FOVn=30*FOV
+FOVd=!Gunner:keySprint()
+FLIRd=!Gunner:keyWalk()
+
+#Help text
+
+if(Helpd&Gunner:keyPressed("H")){
+    Gunner:vehicle():printDriver("Mouse2: GunCam \n Mouse1: Fire \n Shift: Zoom \n Alt: FLIR \n R: Reload \n F: change weapon \n H: Help")
+}
+Helpd=!Gunner:keyPressed("H")
+
+#Angle Force department
+#Pitch limit added
+
+#limitless here:
+#Ang+((clamp(Vertical:toLocal(Parent:toWorld(Gunner:eyeAngles())),-0.7,0.7))
+
+Ang=Ang+((clamp(Vertical:toLocal(Parent:toWorld(Gunner:eyeAngles())),-0.7,0.7))*(abs((Ang+(clamp(Vertical:toLocal(Parent:toWorld(Gunner:eyeAngles())),-1,1))):pitch())<50))
+Tar=Vertical:toLocal(Parent:toWorld(Ang))
+
+El=Tar:pitch()
+Be=Horizontal:toLocal(Parent:toWorld(Ang)):yaw()
+
+#Tuning
+V=(El+$El*7)*Vertical:mass()*25
+H=(Be+$Be*7)*Vertical:mass()*25
+R=Vertical:toLocal(Parent:angles()):roll()*Vertical:mass()
+Re=(R+$R*5)
+
+Vertical:applyAngForce(ang(vec(V,0,Re)))
+Horizontal:applyAngForce(ang(vec(0,H,Re)))
+
+#Weapon Selection
+
+if(Gunner:keyPressed("F")&Seld){
+    if(SelGun==2){SelGun=1}
+    else{SelGun++}
+    
+}
+Seld=!Gunner:keyPressed("F")
+Selected=Guns[SelGun,wirelink]
+Selected["Fire",number]=Gunner:keyAttack1()
+Selected["Reload",number]=Gunner:keyPressed("R")
+
+#EGP UI
+if(EGP){
+    Name=Names[SelGun,string]
+    EGP:egpBox(1,egpScrSize(Gunner)/2,vec2(10))
+    EGP:egpColor(1,vec4(255*!Selected["Ready",number],255*Selected["Ready",number],0,100))
+    EGP:egpText(2,Name+": "+Selected["Shots Left",number]+"/"+(-Selected["Shots Left",number]+Selected["Total Ammo",number]),egpScrSize(Gunner)/2+vec2(50,0))
+}
+
+
+}

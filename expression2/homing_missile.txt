@@ -1,0 +1,10 @@
+@name homing missile
+@inputs Target:entity Go
+@outputs 
+@persist Tarpos:vector
+@trigger 
+runOnTick(5)
+Tarpos=Target:pos()
+if (Go) { Force=Tarpos-entity():pos()
+    entity():isWeldedTo():applyForce(Force*30) 
+}

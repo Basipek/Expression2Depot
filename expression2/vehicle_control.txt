@@ -1,0 +1,33 @@
+@name Vehicle Control
+@inputs Pod:wirelink [RFront,LFront, Base]:entity Engine:wirelink
+@outputs Gear Clutch Brake
+@persist RF:angle LF:angle Actived Active
+@trigger 
+
+if(first()|dupefinished()){Active=0,Actived=0}
+
+event tick() {
+    if(!RFront|!LFront|!Base){exit()}
+    
+    Engine["Throttle",number]=(Pod["W",number]|Pod["S",number])*50*(Engine["RPM",number]<3900)+(Pod["Shift",number]&(Pod["W",number]|Pod["S",number]))*50
+    
+    Clutch=!((Pod["W",number]|Pod["S",number]))
+    
+    Gear=1+(Pod["S",number])
+    
+    Brake=10*((Pod["Space",number])|!Active)
+    
+    if(Actived&(Pod["R",number])){Active=!Active,Actived=!Actived}
+    
+    Actived=!(Pod["R",number])
+    
+    Engine["Active",number]=Active
+    
+    RAng=RFront:toLocal(Base:toWorld(ang(vec(0,30*(+Pod["A",number]-Pod["D",number]),0))))
+    RF=ang(vec(RAng:pitch(),RAng:yaw(),RAng:roll()))
+    LAng=LFront:toLocal(Base:toWorld(ang(vec(0,30*(+Pod["A",number]-Pod["D",number]),0))))
+    LF=ang(vec(LAng:pitch(),LAng:yaw(),LAng:roll()))
+    
+    RFront:applyAngForce((RF+$RF*5)*RFront:mass()*100)
+    LFront:applyAngForce((LF+$LF*5)*LFront:mass()*100)
+}

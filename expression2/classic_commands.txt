@@ -1,0 +1,73 @@
+@name classic commands
+@inputs 
+@outputs 
+@persist Tar:entity RePos:vector Tar2:entity
+@trigger 
+runOnChat(1)
+function string ls(Index){
+    return owner():lastSaid():lower():explode(" ")[Index,string]
+}
+#tp someone to aimpos
+if(chatClk(owner())&ls(1)=="/tp"&ls(2)!=""){
+    hideChat(1)
+    Tar=findPlayerByName(owner():lastSaid():lower():explode(" ")[2,string])
+RePos=Tar:pos()
+    Tar:plySetPos(owner():aimPos())
+}
+#return last
+if(chatClk(owner())&ls(1)=="/return"){
+    hideChat(1)
+    Tar:plySetPos(RePos)
+}
+#tp a person to
+if(chatClk(owner())&ls(1)=="/tpu"&ls(2)!=""&ls(3)!=""){
+    hideChat(1)
+    Tar=findPlayerByName(ls(2))
+    RePos=Tar:pos()
+    Tar2=findPlayerByName(ls(3))
+    Tar:reposition(Tar2:pos()+vec(0,50,0))
+    Tar:plySetPos(Tar2:pos()+vec(0,50,0))
+}
+#ignite
+if(chatClk(owner())&ls(1)=="/ignite"&ls(2)!=""&ls(3)!=""){
+    hideChat(1)
+    if(ls(2)=="*"){foreach(K,V:entity=players()){V:plyIgnite(round(ls(3):toNumber()))}}
+    else{
+    findPlayerByName(ls(2)):plyIgnite(round(ls(3):toNumber()))
+}}
+#hp
+if(chatClk(owner())&ls(1)=="/hp"&ls(2)!=""&ls(3)!=""){
+    hideChat(1)
+    if(ls(2)=="*"){foreach(K,V:entity=players()){V:plySetHealth(round(ls(3):toNumber()))}}
+    else{
+    Tar=findPlayerByName(ls(2))
+    Tar:plySetHealth(round(ls(3):toNumber()))
+}}
+#noclip
+if(chatClk(owner())&ls(1)=="/noclip"&ls(2)!=""){
+    hideChat(1)
+        if(ls(2)=="*"){foreach(K,V:entity=players()){if(V:inNoclip()){V:plyNoclip(0)}else
+{V:plyNoclip(1)}}}
+    else{
+    Tar=findPlayerByName(ls(2))
+    if(Tar:inNoclip()){Tar:plyNoclip(0)}else
+    {Tar:plyNoclip(1)}
+}}
+#freeze
+if(chatClk(owner())&ls(1)=="/freeze"&ls(2)!=""){
+    hideChat(1)
+    if(ls(2)=="*"){foreach(K,V:entity=players()){if(V:isFrozen()){V:plyFreeze(0)}else
+{V:plyFreeze(1)}}}}else{
+    Tar=findPlayerByName(ls(2))
+    if(Tar:isFrozen()){Tar:plyFreeze(0)}else
+    {Tar:plyFreeze(1)}
+}
+#god
+if(chatClk(owner())&ls(1)=="/god"&ls(2)!=""){
+    hideChat(1)
+    if(ls(2)=="*"){foreach(K,V:entity=players()){if(V:plyHasGod()){V:plyGod(0)}else
+{V:plyGod(1)}}}}else{
+    Tar=findPlayerByName(ls(2))
+    if(Tar:plyHasGod()){Tar:plyGod(0)}else
+    {Tar:plyGod(1)}
+}

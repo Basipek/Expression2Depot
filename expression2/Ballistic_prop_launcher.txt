@@ -1,0 +1,22 @@
+@name Ballistic prop launcher (WIP)
+@inputs A Tarpos:vector
+@outputs 
+@persist B Ent:entity [Pos1 Pos2]:vector
+@trigger 
+interval(10)
+
+if(first()){
+    B=0
+    Ent=entity():isWeldedTo()
+    Pos1=Ent:pos()
+    Pos2=Pos1+((Tarpos-Pos1)/2)
+}
+if(A){
+    B+=clamp(1-B,-0.005,0.005)
+    
+    Ent:applyForce(
+    ((bezier(Pos1,Pos2,Tarpos,B)-Ent:pos())*10-Ent:vel())*Ent:mass()
+    )
+
+}
+
