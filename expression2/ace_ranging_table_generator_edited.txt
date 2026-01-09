@@ -1,7 +1,7 @@
 @name Ranging Table Generator EDITED
 @persist MVel Ang AMin AMax AStp Stp NStp Delay Drag G:vector2  Table:table Ready
 @inputs Dist AngleIn
-@outputs Table:table AngOut Ready DistOut
+@outputs Table:table AngOut AngOutIDF Ready DistOut
 
 if (first() | dupefinished()) {
     Crate = entity():isWeldedTo()
@@ -123,5 +123,5 @@ function number getAngForDist(Dist:number,IDF:number) {
         return 0
     }
 
-if (Dist!=0) {AngOut=getAngForDist(Dist,0)}
+if (Dist!=0) {AngOut=getAngForDist(Dist,0),AngOutIDF=getAngForDist(Dist,1)}
 if (AngleIn!=0) {DistOut=getDistForAng(AngleIn,Table)}

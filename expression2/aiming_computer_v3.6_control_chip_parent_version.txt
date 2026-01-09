@@ -1,12 +1,12 @@
-@name Aiming Computer V3.5 Control Chip Parent Version
+@name Aiming Computer V3.6 Control Chip Parent Version
 @inputs TarAng:angle Base:entity [Weapon AmmoBox BallisticsComputer]:wirelink
 @inputs Rangetable:table [YawEnt PitchEnt]:entity WeaponEnt:entity
 @inputs Active Selected IDF TarThePos [TarPos TarVel]:vector SlaveEnt:entity Fire Reload Unload
 @outputs Base:entity [Weapon AmmoBox]:wirelink WeaponEnt:entity Label:string Active Selected Angle:angle Ang Fire Reload Unload
 @outputs Rangetable:table TarPos:vector
 @persist [CurAngle MinLimits MaxLimits RotSpeed]:angle Gun:entity Slave:wirelink WeaponEnt:entity Weapon:wirelink MuzVel Ang TarVelFinal:vector
-@persist DONTTURN
-@trigger 
+@persist DONTTURN [SoundReload SoundReady SoundAim SoundTurret]:string SoundReadyD SoundAimD SoundTurretD
+@trigger
 @strict
 
 #INSTRUCTIONS#
@@ -27,6 +27,11 @@ basipekgaming@gmail.com
 V3.5 developed on 05.12.2025
 - I probably made some nice changes, but the MOST IMPORTANT PART IS TO STOP USING BALLSOCKET FOR GUN
      USE PARENT ENT INPUTS INSTEAD
+    
+V3.6 developed on 09.01.2026
+- Reduced tick frequency via lambda timer
+- some more optimizations
+- Added sounds, see params
 ]#
 
 function number getAngForDist(Dist:number,Table:table,IDF:number) { #08.04.2024
@@ -62,7 +67,7 @@ function number getETAForDist(Dist:number,Table:table) { #08.04.2024
     return 0
 }
 
-if (0){Base=noentity(),Active=Selected=0,Weapon=AmmoBox=nowirelink(),Rangetable=table(),Fire=Unload=Reload=0,WeaponEnt=noentity()}
+if (0){Base=_NO_ENTITY,TarPos=vec(0),Active=Selected=0,Weapon=AmmoBox=nowirelink(),Rangetable=table(),Fire=Unload=Reload=0,WeaponEnt=_NO_ENTITY}
 Weapon=Weapon
 WeaponEnt=WeaponEnt
 Base=Base
@@ -86,10 +91,16 @@ if (first() || dupefinished()) {
     local Elevation = 89
     local Depression = 45
     local Yaw = 360
-    RotSpeed = ang(1)
+    RotSpeed = ang(vec(1.5,2,1))
     
     Label="Gun1"
     entity():setName("Aiming Computer V3.5 Control Chip Parent Version: "+Label)
+    
+    #Sounds for events
+    SoundAim="acf_extra/tankfx/clunk.wav"
+    SoundTurret="acf_extra/tankfx/turretelectric.wav"
+    SoundReady="acf_extra/tankfx/gnomefather/rack.wav"
+    SoundReload="acf_extra/tankfx/gnomefather/reload2.wav"
     
     DONTTURN=0#FOR ACF TURRETS
     
@@ -114,39 +125,8 @@ if (first() || dupefinished()) {
     }
 }
 
-event tick() {
-    if (!entity():isFrozen()&!entity():isPlayerHolding()){entity():propFreeze(1)}
-    if (!Base || !Gun) {exit()}
-    if (!Active) {entity():setAng(CurAngle+Base:angles())}
-    if (Active) {
-        MuzVel=max(Weapon["Muzzle Velocity",number],0)
-        
-        WeaponEnt=Weapon["Entity",entity]
-        if (WeaponEnt:isValid()) {
-            TarVelFinal=TarVel-WeaponEnt:vel()
-        }else{
-            WeaponEnt=PitchEnt
-            TarVelFinal=TarVel-Base:vel()
-        }
-        
-        Weapon["Fire",number]=Fire=Fire
-        Weapon["Reload",number]=Reload=Reload
-        Weapon["Unload",number]=Unload=Unload
-        
-        if (SlaveEnt){if(SlaveEnt:owner()==owner()){Slave=SlaveEnt:wirelink()}}
-        if (Active&SlaveEnt) {
-            Slave["Weapon",wirelink]=Weapon
-            Slave["TarAng",angle]=TarAng
-            Slave["TarPos",vector]=TarPos
-            Slave["TarVel",vector]=TarVel
-            Slave["TarThePos",number]=TarThePos
-            Slave["IDF",number]=IDF
-            Slave["Active",number]=Active
-            Slave["Selected",number]=Selected
-            Slave["Rangetable",table]=Rangetable
-            reset()
-        }
-        
+
+Interv = function() {
         #From V2
         if(TarPos!=vec(0)&TarThePos&WeaponEnt:isValid()){
             if (BallisticsComputer){
@@ -207,6 +187,19 @@ event tick() {
         CurAngle[3]=0#Base:angles():roll()
         CurAngle[2]=CurAngle[2]%360
         
+        if ((abs(Clamped:pitch())<1&abs(Clamped:yaw())<1)#Sound Logic
+            &
+            SoundAimD
+        ){
+            WeaponEnt:emitSound(SoundAim)
+            WeaponEnt:emitSoundStop(SoundTurret)
+            SoundTurretD=0
+        }elseif(!SoundTurretD&SoundAimD){
+            WeaponEnt:emitSound(SoundTurret,100,150,0.5)
+            SoundTurretD=1
+        }
+        SoundAimD=!(abs(Clamped:pitch())<1&abs(Clamped:yaw())<1)
+        
         entity():setAng(Base:toWorld(clamp(CurAngle,MinLimits,MaxLimits)))#CurAngle+Base:angles()
         
         #31.05.2024 , Sets angles of appropriate entities just like ACF turrets
@@ -221,7 +214,50 @@ event tick() {
             }
         }
     }
-}
+
+    if (!entity():isFrozen()&!entity():isPlayerHolding()){entity():propFreeze(1)}
+    if (!Base || !Gun) {exit()}
+    if (!Active&!(YawEnt|PitchEnt)) {entity():setAng(CurAngle+Base:angles())}
+    if (Active) {
+        MuzVel=max(Weapon["Muzzle Velocity",number],0)
+        
+        WeaponEnt=Weapon["Entity",entity]
+        if (WeaponEnt:isValid()) {
+            TarVelFinal=TarVel-WeaponEnt:vel()
+        }else{
+            WeaponEnt=PitchEnt
+            TarVelFinal=TarVel-Base:vel()
+        }
+        
+        Weapon["Fire",number]=Fire=Fire
+        Weapon["Reload",number]=Reload=Reload
+        Weapon["Unload",number]=Unload=Unload
+        
+        
+        #Sound logic
+        if (!WeaponEnt:acfReady()&SoundReadyD){WeaponEnt:emitSound(SoundReload)}
+        if (WeaponEnt:acfReady()&!SoundReadyD){WeaponEnt:emitSound(SoundReady),WeaponEnt:emitSoundStop(SoundReload)}
+        SoundReadyD=WeaponEnt:acfReady()
+        
+        if (SlaveEnt){if(SlaveEnt:owner()==owner()){Slave=SlaveEnt:wirelink()}}
+        if (Active&SlaveEnt) {
+            Slave["Weapon",wirelink]=Weapon
+            Slave["TarAng",angle]=TarAng
+            Slave["TarPos",vector]=TarPos
+            Slave["TarVel",vector]=TarVel
+            Slave["TarThePos",number]=TarThePos
+            Slave["IDF",number]=IDF
+            Slave["Active",number]=Active
+            Slave["Selected",number]=Selected
+            Slave["Rangetable",table]=Rangetable
+            reset()
+        }
+    }
+if(!timerExists("Interv")){timer("Interv",0.1,Interv)}
+    
+
+
+#if (!timer("Interv")){Interv()}
 #[
 
 This one only moves the E2 to aim the selected weapon which will be ballsocketed to the chip.

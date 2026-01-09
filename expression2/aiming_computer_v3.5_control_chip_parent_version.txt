@@ -62,7 +62,7 @@ function number getETAForDist(Dist:number,Table:table) { #08.04.2024
     return 0
 }
 
-if (0){Base=noentity(),Active=Selected=0,Weapon=AmmoBox=nowirelink(),Rangetable=table(),Fire=Unload=Reload=0,WeaponEnt=noentity()}
+if (0){Base=_NO_ENTITY,TarPos=vec(0),Active=Selected=0,Weapon=AmmoBox=nowirelink(),Rangetable=table(),Fire=Unload=Reload=0,WeaponEnt=_NO_ENTITY}
 Weapon=Weapon
 WeaponEnt=WeaponEnt
 Base=Base

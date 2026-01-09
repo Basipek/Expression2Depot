@@ -73,7 +73,7 @@ V3.5 developed on 05.12.2025
 if (first()) {
     Active=Actived=Changed=ActionMenuChanged=TarChanged=0
     Weapon=Control=nowirelink()
-    Gunner=noentity()
+    Gunner=_NO_ENTITY
     EGPSize=ActionMenuIndex=EGPLockedPosBox=EGPLockedPosBoxTracker=EGPLeadPosBox=EGPLeadPosBoxTracker
         =EGPRadarLeadPosBox=EGPRadarLeadPosBoxTracker=1
     HitPos=LockedPos=vec(0)
@@ -494,7 +494,8 @@ event tick() {
     }
     if (WeaponEnt) {
         Gun=WeaponEnt
-        rangerFilter(Gun)
+        rangerFilter(Gun:parent():children())
+        rangerFilter(Gun:parent():parent():children())
         
         HitPos=rangerOffset(1000000,Gun:pos(),Cam["CamDir",vector]):position()#Cam["HitPos",vector] Cam hitpos no work for some reason
     }elseif(Pod){
@@ -579,9 +580,10 @@ event keyPressed(Player:entity, Key:string, Down:number, KeyBind:string) {
     }
     if (WeaponEnt) {
         Gun=WeaponEnt
-        rangerFilter(Gun)
+        rangerFilter(Gun:parent():children())
+        rangerFilter(Gun:parent():parent():children())
         
-        HitPos=rangerOffset(1000000,Gun:pos(),Cam["CamDir",vector]):position()#Cam["HitPos",vector] Cam hitpos no work for some reason
+        HitPos=Cam["HitPos",vector] #rangerOffset(1000000,Gun:pos(),Cam["CamDir",vector]):position() # Cam hitpos no work for some reason
     }elseif(Pod){
         HitPos=Pod["AimPos",vector]
     }
