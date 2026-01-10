@@ -1,9 +1,7 @@
 # Expression2Depot: Personal Script Archive
 ![E2](https://img.shields.io/badge/Language-Expression_2-blue)
 
-A collection of Garry's Mod Wiremod Expression 2 (E2) scripts developed since 201X. This repository serves as a timeline for my programming
-
-> **Note:** This repository is a "Vault." The code is preserved in its original state and any contributions are, consequently, strictly theoretical.
+A collection of Garry's Mod Wiremod Expression 2 (E2) scripts developed since 201X. This repository serves as a timeline for my programming journey in E2, from simple scripts to complex control systems.
 
 ### License:
 Unless stated otherwise in any script, the code in this repository is public domain. Go wild.
@@ -11,12 +9,10 @@ Unless stated otherwise in any script, the code in this repository is public dom
 
 ## Contact and Contribution
 
-If you have any questions regarding the development of these, or about E2 in general, feel free to contact me at basipekgaming@gmail.com
+If you have any questions regarding the development processes, or need help about E2 in general, feel free to contact me at basipekgaming@gmail.com
 
-
-
-For contributions; the repo is currently a vault, so no modifications are in order. If there is an optimization or bug, it is going to be a theoretical discussion rather than an applied issue.
-
+If you have otherwise anything you'd like to see improved in any part of the repo, feel free to PR. There's no coding standard, so assume this is a collaborative discussion.
+> **Note:** If the script is silly and sentimental, the code should be preserved in its original state and any contributions shall be, consequently, strictly theoretical.
 
 
 Thank you.
